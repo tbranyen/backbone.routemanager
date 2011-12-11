@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+
+  <title>Index</title>
+</head>
+
+<body>
+  <script src="test/jquery.js"></script>
+  <script src="test/underscore.js"></script>
+  <script src="test/backbone.js"></script>
+  <script src="backbone.routemanager.js"></script>
+
+  <script>
+    var app = {};
+
+    jQuery(function($) {
+
+      // Create a route manager
+      app.router = new Backbone.RouteManager({
+        routes: {
+          "": "index"
+        },
+
+        index: function() {
+          alert("lol");
+        }
+      });
+
+      Backbone.history.start();
+
+    });
+  </script>
+</body>
+</html>
