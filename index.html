@@ -18,16 +18,49 @@
 
     jQuery(function($) {
 
+      var RandomRouter = Backbone.Router.extend({
+        routes: {
+          "a": "a"
+        },
+
+        filters: {
+          "a": "someFunc"
+        },
+
+        sync: function() {
+          return "lol";
+        },
+
+        async: function() {
+          var done = this.async();
+
+          done("lol");
+        },
+
+        defer: function() {
+          var defer = this.defer();
+
+          defer.resolve("lol");
+        },
+
+        a: function() {
+          alert("a");
+        }
+      });
+
       // Create a route manager
       app.router = new Backbone.RouteManager({
         routes: {
-          "": "index"
+          "": "index",
+          "random/": RandomRouter
         },
 
         index: function() {
           alert("lol");
         }
       });
+
+      console.log(app.router.routers);
 
       Backbone.history.start();
 

@@ -12,6 +12,7 @@ var RouteManager = Backbone.RouteManager = Backbone.Router.extend({
   // The constructor must be overridden, because this is where Backbone
   // internally binds all routes.
   constructor: function(options) {
+    var SubRouter;
     // Useful for nested functions...
     var manager = this;
     // Use for normal routes
@@ -19,12 +20,13 @@ var RouteManager = Backbone.RouteManager = Backbone.Router.extend({
     // Use for attached routers
     var routers = this.routers = {};
 
+    // Ensure all instance methods are bound to this manager.
+    _.bindAll(this);
+
     // Iterate through all routes
     _.each(options.routes, function(action, route) {
       // Prefix is optional, set to empty string if not passed
       var prefix = route || "";
-      // This assignment is completely cosmetic.
-      var SubRouter = action;
 
       // Allow for optionally omitting trailing /.  Since base routes do not
       // trigger with a trailing / this is actually kind of important =)
@@ -44,8 +46,33 @@ var RouteManager = Backbone.RouteManager = Backbone.Router.extend({
       // SubRouter constructors need to be augmented to allow for filters, they
       // are also attached to a special property on the RouteManager for
       // easy accessibility and event binding.
-      if (SubRouter.prototype instanceof Backbone.Router) {
+      if (action.prototype instanceof Backbone.Router) {
         // Definitely need to augment the SubRouter, BEFORE initializing it.
+        // FIXME: This is very, very wrong.  Extending does not yield
+        // the correct behavior.
+        SubRouter = action.extend({
+          constructor: function() {
+            // FIXME: ALL THIS CODE IS REDUNDANT
+            var routes = {};
+
+            // Every route needs to be prefixed
+            _.each(this.routes, function(callback, path) {
+              if (path) {
+                return routes[prefix + "/" + path] = callback;
+              }
+
+              // If the path is "" just set to prefix, this is to comply
+              // with how Backbone expects base paths to look gallery vs gallery/
+              routes[prefix] = callback;
+            });
+
+            // Must override with prefixed routes
+            this.routes = routes;
+
+            // Required to have Backbone set up routes
+            return Backbone.Router.prototype.constructor.call(this);
+          }
+        });
 
         // Initialize the Router inside the collection
         routers[route] = new SubRouter();
@@ -83,17 +110,29 @@ var RouteManager = Backbone.RouteManager = Backbone.Router.extend({
   // Augment navigate method to provide a singular place to trigger
   // routes irrespective of internal router.  This is crucial to
   // ensure navigation events work as expected.
-  navigate: function() {
-    // I think it's useful to have a global "route" event.  So we'll trigger
-    // one.  TODO: Fill in rest of arguments.
-    this.trigger("route");
+  navigate: function(route, trigger) {
+    // TODO: CLEAN UP DIS FUNCTION, this found non-sense is annoying
+    var found;
+    var manager = this;
 
     // Determine if the route exists in an attached router
-    //
-    // Determine if the route exists in the manager
-    //
-    // It doesn't exist at all!
-    return Backbone.Router.prototype.navigate.apply(this, arguments);
+    found = _.detect(this.routers, function(router, prefix) {
+      if (route.indexOf(prefix) == 0) {
+        router.navigate(route, trigger);
+
+        return router;
+      }
+    });
+
+    // If nothing was found
+    if (!found) {
+      found = manager;
+      Backbone.Router.prototype.navigate.apply(this, arguments);
+    }
+
+    // I think it's useful to have a global "route" event.  So we'll trigger
+    // one.
+    this.trigger("route", route, found);
   },
 
   // This may need to be augmented in case you wish to late bind
