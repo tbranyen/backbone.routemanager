@@ -24,23 +24,36 @@
         },
 
         filters: {
-          "a": "someFunc"
+          "a": ["login", "fetchDataSource1", "fetchDataSource2"]
         },
 
-        sync: function() {
-          return "lol";
+        sync: function(params) {
+          params.msg = "lol";
+
+          return true;
+        },
+
+        githubLogin: function() {
+          var done = this.async();
+
+          // Determine 
+          done(true);
         },
 
         async: function() {
           var done = this.async();
 
-          done("lol");
+          this.loggedin = false;
+
+          done(false);
         },
 
         defer: function() {
           var defer = this.defer();
 
-          defer.resolve("lol");
+          defer.resolve();
+
+          defer.reject();
         },
 
         a: function() {
@@ -52,15 +65,18 @@
       app.router = new Backbone.RouteManager({
         routes: {
           "": "index",
-          "random/": RandomRouter
+          "random": RandomRouter
         },
 
         index: function() {
-          alert("lol");
         }
       });
 
       console.log(app.router.routers);
+
+      app.router.routers.random.bind("route:a", function() {
+        console.log("triggered");
+      });
 
       Backbone.history.start();
 

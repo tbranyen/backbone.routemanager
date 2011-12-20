@@ -2,10 +2,70 @@
  * Copyright 2011, Tim Branyen (@tbranyen)
  * backbone.routemanager.js may be freely distributed under the MIT license.
  */
+
+/* JavaScript Sync/Async forEach - v0.1.2 - 11/17/2011
+ * http://github.com/cowboy/javascript-sync-async-foreach
+ * Copyright (c) 2011 "Cowboy" Ben Alman; Licensed MIT, GPL */
 (function(Backbone, _, $) {
 
 // Enforce strict mode
 "use strict";
+
+// Attach @cowboy's async forEach implementation here
+var async = {
+
+  // Iterate synchronously or asynchronously.
+  forEach: function(arr, eachFn, doneFn) {
+    var i = -1;
+    // Resolve array length to a valid (ToUint32) number.
+    var len = arr.length >>> 0;
+
+    // This IIFE is called once now, and then again, by name, for each loop
+    // iteration.
+    (function next(result) {
+      // This flag will be set to true if `this.async` is called inside the
+      // eachFn` callback.
+      var async;
+      // Was false returned from the `eachFn` callback or passed to the
+      // `this.async` done function?
+      var abort = result === false;
+
+      // Increment counter variable and skip any indices that don't exist. This
+      // allows sparse arrays to be iterated.
+      do { ++i; } while (!(i in arr) && i !== len);
+
+      // Exit if result passed to `this.async` done function or returned from
+      // the `eachFn` callback was false, or when done iterating.
+      if (abort || i === len) {
+        // If a `doneFn` callback was specified, invoke that now. Pass in a
+        // boolean value representing "not aborted" state along with the array.
+        if (doneFn) {
+          doneFn(!abort, arr);
+        }
+        return;
+      }
+
+      // Invoke the `eachFn` callback, setting `this` inside the callback to a
+      // custom object that contains one method, and passing in the array item,
+      // index, and the array.
+      result = eachFn.call({
+        // If `this.async` is called inside the `eachFn` callback, set the async
+        // flag and return a function that can be used to continue iterating.
+        async: function() {
+          async = true;
+          return next;
+        }
+      }, arr[i], i, arr);
+
+      // If the async flag wasn't set, continue by calling `next` synchronously,
+      // passing in the result of the `eachFn` callback.
+      if (!async) {
+        next(result);
+      }
+    }());
+  }
+
+};
 
 // RouteManager at its core is specifically a Backbone.Router
 var RouteManager = Backbone.RouteManager = Backbone.Router.extend({
@@ -111,28 +171,46 @@ var RouteManager = Backbone.RouteManager = Backbone.Router.extend({
   // routes irrespective of internal router.  This is crucial to
   // ensure navigation events work as expected.
   navigate: function(route, trigger) {
-    // TODO: CLEAN UP DIS FUNCTION, this found non-sense is annoying
-    var found;
+    var router;
     var manager = this;
 
     // Determine if the route exists in an attached router
-    found = _.detect(this.routers, function(router, prefix) {
-      if (route.indexOf(prefix) == 0) {
-        router.navigate(route, trigger);
-
+    router = _.detect(this.routers, function(router, prefix) {
+      // TODO Understand if the slice is still necessary
+      if (route.indexOf(prefix.substring(0, prefix.length-1)) == 0) {
         return router;
       }
     });
 
-    // If nothing was found
-    if (!found) {
-      found = manager;
-      Backbone.Router.prototype.navigate.apply(this, arguments);
-    }
+    // If no router was defined trigger on the manager
+    router = router || manager;
+
+    // TODO Decide if events are necessary
+    // Trigger a before route event
+    //this.trigger("before", route, router);
+
+    // Handle all before handlers
+    var arr = [];
+
+    // For each function determine if it should be sync, async, deferred.
+    //async.forEach(arr, function(item, index, arr) {
+    //  // Function reference or method
+    //  var callback = _.isFunction(item) ? item : router[item];
+
+    //  if (callback = callback || manager[item]) {
+
+    //  }
+    //});
+
+    // Actually navigate
+    router.navigate(route, trigger);
+
+    // Trigger an after route event
+    //this.trigger("after", route, router);
 
     // I think it's useful to have a global "route" event.  So we'll trigger
     // one.
-    this.trigger("route", route, found);
+    //this.trigger("route", route, found);
   },
 
   // This may need to be augmented in case you wish to late bind
