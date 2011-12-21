@@ -18,46 +18,44 @@
 
     jQuery(function($) {
 
-      var RandomRouter = Backbone.Router.extend({
+      var RandomRouter = Backbone.RouteManager.Router.extend({
         routes: {
           "a": "a"
         },
 
         before: {
-          "a": ["login", "fetchDataSource1", "fetchDataSource2"]
+          "a": ["sync", "async", "defer"]
         },
 
         sync: function(params) {
-          params.msg = "lol";
-
-          return true;
-        },
-
-        githubLogin: function() {
-          var done = this.async();
-
-          // Determine 
-          done(true);
+          console.log("lol");
+          return "lol";
         },
 
         async: function() {
           var done = this.async();
 
-          this.loggedin = false;
-
-          done(false);
+          $.get("/", function(contents) {
+            done(contents);
+          });
         },
 
         defer: function() {
-          var defer = this.defer();
+          var def = this.defer();
 
-          defer.resolve();
-
-          defer.reject();
+          $.get("/", function(contents) {
+            def.resolve(contents);
+          }).fail(function() {
+            def.reject();
+          });
         },
 
         a: function() {
-          alert("a");
+          // Accessing data from the filter
+          this.before[0] // lol
+          this.before[1] // ???
+
+          console.log("hi");
         }
       });
 
@@ -73,6 +71,10 @@
       });
 
       console.log(app.router.routers);
+
+      app.router.bind("route", function() {
+        console.log("global route", arguments);
+      });
 
       app.router.routers.random.bind("route:a", function() {
         console.log("triggered");

@@ -81,6 +81,29 @@ var RouteManager = Backbone.RouteManager = Backbone.Router.extend({
 
     // Iterate through all routes
     _.each(options.routes, function(action, route) {
+      // Wrap the SubRouter's constructor function
+      function ctor(router) {
+        var routes = {};
+
+        // Every route needs to be prefixed
+        _.each(router.routes, function(callback, path) {
+          if (path) {
+            return routes[prefix + path] = callback;
+          }
+
+          // If the path is "" just set to prefix, this is to comply
+          // with how Backbone expects base paths to look gallery vs gallery/
+          routes[prefix] = callback;
+        });
+
+        // Must override with prefixed routes
+        router.routes = routes;
+
+        // FIXME Can't touch this!
+        // Required to have Backbone set up routes
+        return router.constructor.__super__.constructor.prototype.constructor.__super__.constructor.apply(router, arguments)
+      }
+
       // Prefix is optional, set to empty string if not passed
       var prefix = route || "";
 
@@ -103,35 +126,13 @@ var RouteManager = Backbone.RouteManager = Backbone.Router.extend({
       // are also attached to a special property on the RouteManager for
       // easy accessibility and event binding.
       if (action.prototype instanceof Backbone.Router) {
-        // Definitely need to augment the SubRouter, BEFORE initializing it.
-        // FIXME: This is very, very wrong.  Extending does not yield
-        // the correct behavior.
-        SubRouter = action.extend({
-          constructor: function() {
-            // FIXME: ALL THIS CODE IS REDUNDANT
-            var routes = {};
-
-            // Every route needs to be prefixed
-            _.each(this.routes, function(callback, path) {
-              if (path) {
-                return routes[prefix + "/" + path] = callback;
-              }
-
-              // If the path is "" just set to prefix, this is to comply
-              // with how Backbone expects base paths to look gallery vs gallery/
-              routes[prefix] = callback;
-            });
-
-            // Must override with prefixed routes
-            this.routes = routes;
-
-            // Required to have Backbone set up routes
-            return Backbone.Router.prototype.constructor.call(this);
-          }
-        });
+        SubRouter = action;
 
         // Initialize the Router inside the collection
-        routers[route] = new SubRouter();
+        routers[route] = new SubRouter(ctor);
+
+        // Used to avoid multiple lookups for router+prefix
+        routers[route]._prefix = prefix;
 
         // No need to delete from this.routes, since the entire object is
         // replaced anyways.
@@ -169,6 +170,7 @@ var RouteManager = Backbone.RouteManager = Backbone.Router.extend({
   navigate: function(route, trigger) {
     var router, prefix, before, after;
     var manager = this;
+    var options = this.options;
     var routeExp = manager._routeToRegExp(route);
 
     // Determine if the route exists in an attached router
@@ -176,52 +178,115 @@ var RouteManager = Backbone.RouteManager = Backbone.Router.extend({
       // TODO Understand if the slice is still necessary
       //if (route.indexOf(prefix.substring(0, prefix.length-1)) == 0) {
       if (route.indexOf(prefix) == 0) {
-        return router;
+        return true;
       }
     });
 
     // If no router was defined, trigger on the manager
     if (!router) {
-      // We'll need to do something else here
+      // TODO Do something else here
       return;
     }
 
-    // TODO Affix the prefix
+    // Prefix shortening
+    prefix = router._prefix;
 
     // Detect any filters to run before the route navigate
     before = _.detect(router.before, function(filters, route) {
-      console.log(routeExp, prefix + "/" + route);
-      console.log(routeExp.exec(prefix + "/" + route));
+      if (routeExp.exec(prefix + route)) {
+        return true; 
+      }
     });
-
-    console.log(before);
 
     // TODO Decide if events are necessary
     // Trigger a before route event
     //this.trigger("before", route, router);
 
+    // Returns an object that provides asynchronous or
+    // deferrable capabilities.
+    function async(done) {
+      var handler = options.deferred();
+
+      // Used to handle asynchronous filters
+      handler.async = function() {
+        handler._isAsync = true;
+
+        return done;
+      };
+
+      // Used to handle deferred filters
+      handler.defer = function() {
+        handler._isDefer = true;
+
+        var deferred = options.deferred();
+
+        // Add to the list of deferreds
+        async._bucket.push(deferred);
+
+        return deferred;
+      };
+
+      return handler;
+    }
+
+    // Attach an array reference to contain all the deferreds
+    async._bucket = [];
+
     // Handle all before handlers
-    var arr = [];
+    forEach(before, function(callback, index, array) {
+      var handler, result;
+      // Put the loop into async
+      var done = this.async();
 
-    // For each function determine if it should be sync, async, deferred.
-    //async.forEach(arr, function(item, index, arr) {
-    //  // Function reference or method
-    //  var callback = _.isFunction(item) ? item : router[item];
+      // Normalize the callback function, its either a direct reference, on
+      // the router or the manager.
+      if (!_.isFunction(callback)) {
+        callback = router[callback] || manager[callback];
+      }
 
-    //  if (callback = callback || manager[item]) {
+      // Assign a new async/defer handler
+      handler = async(function() {
+        done.apply(this, arguments);
+      });
 
-    //  }
-    //});
+      // Trigger the filter, passing the handler as context and the router and
+      // manager as arguments.
+      result = callback.call(handler, router, manager);
 
+      // If not a deferred, check if there are any and execute them first
+      if (!handler.isDefer && async._bucket.length) {
+        $.when.apply(null, async._bucket).always(function() {
+          // Reset the bucket
+          async._bucket.splice(0, async._bucket.length);
+
+          // If not async, go to the next one
+          if (!handler._isAsync) {
+            done(result);
+          }
+        });
+
+        return;
+      }
+      
+      // Add to deferred queue and continue
+      if (handler.isDefer) {
+        handler._bucket.push(result);
+
+      // Is not async or deferred
+      } else {
+        // Skip to next function
+        done(result);
+      }
+    },
+    
     // Actually navigate
-    router.navigate(route, trigger);
+    function() {
+      router.navigate(route, trigger);
 
-    // Trigger an after route event
-    //this.trigger("after", route, router);
-
-    // I think it's useful to have a global "route" event.  So we'll trigger
-    // one.
-    //this.trigger("route", route, found);
+      // I think it's useful to have a global "route" event.  So we'll trigger
+      // one.
+      manager.trigger("route", route, router);
+    });
   },
 
   // This may need to be augmented in case you wish to late bind
@@ -238,7 +303,14 @@ var RouteManager = Backbone.RouteManager = Backbone.Router.extend({
     // Without this check the application would react strangely to a foreign
     // input.
     _.isObject(options) && _.extend(existing, options);
-  }
+  },
+
+  Router: Backbone.Router.extend({
+    // This gets passed a custom
+    constructor: function(route) {
+      return route(this);
+    }
+  })
 });
 
 // Default configuration options; designed to be overriden.
