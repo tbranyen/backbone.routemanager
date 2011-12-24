@@ -11,61 +11,57 @@
 // Enforce strict mode
 "use strict";
 
-// Attach @cowboy's async forEach implementation here
-var async = {
+// @cowboy's forEach implementation to iterate synchronously or
+// asynchronously.
+function forEach(arr, eachFn, doneFn) {
+  var i = -1;
+  // Resolve array length to a valid (ToUint32) number.
+  var len = arr.length >>> 0;
 
-  // Iterate synchronously or asynchronously.
-  forEach: function(arr, eachFn, doneFn) {
-    var i = -1;
-    // Resolve array length to a valid (ToUint32) number.
-    var len = arr.length >>> 0;
+  // This IIFE is called once now, and then again, by name, for each loop
+  // iteration.
+  (function next(result) {
+    // This flag will be set to true if `this.async` is called inside the
+    // eachFn` callback.
+    var async;
+    // Was false returned from the `eachFn` callback or passed to the
+    // `this.async` done function?
+    var abort = result === false;
 
-    // This IIFE is called once now, and then again, by name, for each loop
-    // iteration.
-    (function next(result) {
-      // This flag will be set to true if `this.async` is called inside the
-      // eachFn` callback.
-      var async;
-      // Was false returned from the `eachFn` callback or passed to the
-      // `this.async` done function?
-      var abort = result === false;
+    // Increment counter variable and skip any indices that don't exist. This
+    // allows sparse arrays to be iterated.
+    do { ++i; } while (!(i in arr) && i !== len);
 
-      // Increment counter variable and skip any indices that don't exist. This
-      // allows sparse arrays to be iterated.
-      do { ++i; } while (!(i in arr) && i !== len);
-
-      // Exit if result passed to `this.async` done function or returned from
-      // the `eachFn` callback was false, or when done iterating.
-      if (abort || i === len) {
-        // If a `doneFn` callback was specified, invoke that now. Pass in a
-        // boolean value representing "not aborted" state along with the array.
-        if (doneFn) {
-          doneFn(!abort, arr);
-        }
-        return;
+    // Exit if result passed to `this.async` done function or returned from
+    // the `eachFn` callback was false, or when done iterating.
+    if (abort || i === len) {
+      // If a `doneFn` callback was specified, invoke that now. Pass in a
+      // boolean value representing "not aborted" state along with the array.
+      if (doneFn) {
+        doneFn(!abort, arr);
       }
+      return;
+    }
 
-      // Invoke the `eachFn` callback, setting `this` inside the callback to a
-      // custom object that contains one method, and passing in the array item,
-      // index, and the array.
-      result = eachFn.call({
-        // If `this.async` is called inside the `eachFn` callback, set the async
-        // flag and return a function that can be used to continue iterating.
-        async: function() {
-          async = true;
-          return next;
-        }
-      }, arr[i], i, arr);
-
-      // If the async flag wasn't set, continue by calling `next` synchronously,
-      // passing in the result of the `eachFn` callback.
-      if (!async) {
-        next(result);
+    // Invoke the `eachFn` callback, setting `this` inside the callback to a
+    // custom object that contains one method, and passing in the array item,
+    // index, and the array.
+    result = eachFn.call({
+      // If `this.async` is called inside the `eachFn` callback, set the async
+      // flag and return a function that can be used to continue iterating.
+      async: function() {
+        async = true;
+        return next;
       }
-    }());
-  }
+    }, arr[i], i, arr);
 
-};
+    // If the async flag wasn't set, continue by calling `next` synchronously,
+    // passing in the result of the `eachFn` callback.
+    if (!async) {
+      next(result);
+    }
+  }());
+}
 
 // RouteManager at its core is specifically a Backbone.Router
 var RouteManager = Backbone.RouteManager = Backbone.Router.extend({
@@ -85,6 +81,29 @@ var RouteManager = Backbone.RouteManager = Backbone.Router.extend({
 
     // Iterate through all routes
     _.each(options.routes, function(action, route) {
+      // Wrap the SubRouter's constructor function
+      function ctor(router) {
+        var routes = {};
+
+        // Every route needs to be prefixed
+        _.each(router.routes, function(callback, path) {
+          if (path) {
+            return routes[prefix + path] = callback;
+          }
+
+          // If the path is "" just set to prefix, this is to comply
+          // with how Backbone expects base paths to look gallery vs gallery/
+          routes[prefix] = callback;
+        });
+
+        // Must override with prefixed routes
+        router.routes = routes;
+
+        // FIXME Can't touch this!
+        // Required to have Backbone set up routes
+        return router.constructor.__super__.constructor.prototype.constructor.__super__.constructor.apply(router, arguments)
+      }
+
       // Prefix is optional, set to empty string if not passed
       var prefix = route || "";
 
@@ -107,35 +126,13 @@ var RouteManager = Backbone.RouteManager = Backbone.Router.extend({
       // are also attached to a special property on the RouteManager for
       // easy accessibility and event binding.
       if (action.prototype instanceof Backbone.Router) {
-        // Definitely need to augment the SubRouter, BEFORE initializing it.
-        // FIXME: This is very, very wrong.  Extending does not yield
-        // the correct behavior.
-        SubRouter = action.extend({
-          constructor: function() {
-            // FIXME: ALL THIS CODE IS REDUNDANT
-            var routes = {};
-
-            // Every route needs to be prefixed
-            _.each(this.routes, function(callback, path) {
-              if (path) {
-                return routes[prefix + "/" + path] = callback;
-              }
-
-              // If the path is "" just set to prefix, this is to comply
-              // with how Backbone expects base paths to look gallery vs gallery/
-              routes[prefix] = callback;
-            });
-
-            // Must override with prefixed routes
-            this.routes = routes;
-
-            // Required to have Backbone set up routes
-            return Backbone.Router.prototype.constructor.call(this);
-          }
-        });
+        SubRouter = action;
 
         // Initialize the Router inside the collection
-        routers[route] = new SubRouter();
+        routers[route] = new SubRouter(ctor);
+
+        // Used to avoid multiple lookups for router+prefix
+        routers[route]._prefix = prefix;
 
         // No need to delete from this.routes, since the entire object is
         // replaced anyways.
@@ -171,46 +168,125 @@ var RouteManager = Backbone.RouteManager = Backbone.Router.extend({
   // routes irrespective of internal router.  This is crucial to
   // ensure navigation events work as expected.
   navigate: function(route, trigger) {
-    var router;
+    var router, prefix, before, after;
     var manager = this;
+    var options = this.options;
+    var routeExp = manager._routeToRegExp(route);
 
     // Determine if the route exists in an attached router
-    router = _.detect(this.routers, function(router, prefix) {
+    router = _.detect(manager.routers, function(router, prefix) {
       // TODO Understand if the slice is still necessary
-      if (route.indexOf(prefix.substring(0, prefix.length-1)) == 0) {
-        return router;
+      //if (route.indexOf(prefix.substring(0, prefix.length-1)) == 0) {
+      if (route.indexOf(prefix) == 0) {
+        return true;
       }
     });
 
-    // If no router was defined trigger on the manager
-    router = router || manager;
+    // If no router was defined, trigger on the manager
+    if (!router) {
+      // TODO Do something else here
+      return;
+    }
+
+    // Prefix shortening
+    prefix = router._prefix;
+
+    // Detect any filters to run before the route navigate
+    before = _.detect(router.before, function(filters, route) {
+      if (routeExp.exec(prefix + route)) {
+        return true; 
+      }
+    });
 
     // TODO Decide if events are necessary
     // Trigger a before route event
     //this.trigger("before", route, router);
 
+    // Returns an object that provides asynchronous or
+    // deferrable capabilities.
+    function async(done) {
+      var handler = options.deferred();
+
+      // Used to handle asynchronous filters
+      handler.async = function() {
+        handler._isAsync = true;
+
+        return done;
+      };
+
+      // Used to handle deferred filters
+      handler.defer = function() {
+        handler._isDefer = true;
+
+        var deferred = options.deferred();
+
+        // Add to the list of deferreds
+        async._bucket.push(deferred);
+
+        return deferred;
+      };
+
+      return handler;
+    }
+
+    // Attach an array reference to contain all the deferreds
+    async._bucket = [];
+
     // Handle all before handlers
-    var arr = [];
+    forEach(before, function(callback, index, array) {
+      var handler, result;
+      // Put the loop into async
+      var done = this.async();
 
-    // For each function determine if it should be sync, async, deferred.
-    //async.forEach(arr, function(item, index, arr) {
-    //  // Function reference or method
-    //  var callback = _.isFunction(item) ? item : router[item];
+      // Normalize the callback function, its either a direct reference, on
+      // the router or the manager.
+      if (!_.isFunction(callback)) {
+        callback = router[callback] || manager[callback];
+      }
 
-    //  if (callback = callback || manager[item]) {
+      // Assign a new async/defer handler
+      handler = async(function() {
+        done.apply(this, arguments);
+      });
 
-    //  }
-    //});
+      // Trigger the filter, passing the handler as context and the router and
+      // manager as arguments.
+      result = callback.call(handler, router, manager);
 
+      // If not a deferred, check if there are any and execute them first
+      if (!handler.isDefer && async._bucket.length) {
+        $.when.apply(null, async._bucket).always(function() {
+          // Reset the bucket
+          async._bucket.splice(0, async._bucket.length);
+
+          // If not async, go to the next one
+          if (!handler._isAsync) {
+            done(result);
+          }
+        });
+
+        return;
+      }
+      
+      // Add to deferred queue and continue
+      if (handler.isDefer) {
+        handler._bucket.push(result);
+
+      // Is not async or deferred
+      } else {
+        // Skip to next function
+        done(result);
+      }
+    },
+    
     // Actually navigate
-    router.navigate(route, trigger);
+    function() {
+      router.navigate(route, trigger);
 
-    // Trigger an after route event
-    //this.trigger("after", route, router);
-
-    // I think it's useful to have a global "route" event.  So we'll trigger
-    // one.
-    //this.trigger("route", route, found);
+      // I think it's useful to have a global "route" event.  So we'll trigger
+      // one.
+      manager.trigger("route", route, router);
+    });
   },
 
   // This may need to be augmented in case you wish to late bind
@@ -227,7 +303,14 @@ var RouteManager = Backbone.RouteManager = Backbone.Router.extend({
     // Without this check the application would react strangely to a foreign
     // input.
     _.isObject(options) && _.extend(existing, options);
-  }
+  },
+
+  Router: Backbone.Router.extend({
+    // This gets passed a custom
+    constructor: function(route) {
+      return route(this);
+    }
+  })
 });
 
 // Default configuration options; designed to be overriden.
