@@ -182,10 +182,13 @@ var RouteManager = Backbone.RouteManager = Backbone.Router.extend({
       }
     });
 
+    // TODO Ensure filters can be called here...
     // If no router was defined, trigger on the manager
     if (!router) {
-      // TODO Do something else here
-      return;
+      Backbone.Router.prototype.navigate.apply(manager, arguments);
+
+      // TODO Figure out when to call this (on existing pages)
+      return Backbone.history.loadUrl();
     }
 
     // Prefix shortening
@@ -233,7 +236,7 @@ var RouteManager = Backbone.RouteManager = Backbone.Router.extend({
     async._bucket = [];
 
     // Handle all before handlers
-    forEach(before, function(callback, index, array) {
+    before && forEach(before, function(callback, index, array) {
       var handler, result;
       // Put the loop into async
       var done = this.async();
