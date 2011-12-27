@@ -10,9 +10,25 @@ module("views", {
         "sync": "sync"
       },
 
+      before: {
+        "sub/sync": ["syncFilter"]
+      },
+
+      syncFilter: function() {
+        return "lol";
+      },
+
       test: function() {
         harness.data = {
           route: "sub/",
+          context: this,
+          args: arguments
+        };
+      },
+
+      sync: function() {
+        harness.data = {
+          route: "sub/sync",
           context: this,
           args: arguments
         };
@@ -37,7 +53,9 @@ module("views", {
     });
 
     // Do not trigger the initial route
-    Backbone.history.start({ silent: true });
+    try {
+      Backbone.history.start({ silent: true });
+    } catch (ex) {}
   },
 
   teardown: function() {
@@ -47,7 +65,8 @@ module("views", {
   }
 });
 
-asyncTest("basic navigation", function() {
+// Ensure the basic navigation still works like normal routers
+test("basic navigation", function() {
   var harness = this;
 
   // Trigger the manager route
@@ -57,16 +76,15 @@ asyncTest("basic navigation", function() {
   // Trigger the sub route
   harness.router.navigate("sub", true);
   equal(harness.data.route, "sub/", "Sub route triggered");
-
-  start();
 });
 
-asyncTest("sub router : before filters", function() {
+// Ensure before filters work on sub routers
+test("sub router : before filters", function() {
   var harness = this;
 
-  // Trigger the sub route
+  // Test synchronous filters
   harness.router.navigate("sub/sync", true);
   equal(harness.data.route, "sub/sync", "Sync triggered");
 
-  start();
+
 });
