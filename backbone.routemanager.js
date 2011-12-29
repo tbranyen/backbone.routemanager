@@ -68,8 +68,8 @@ var RouteManager = Backbone.RouteManager = Backbone.Router.extend({
   // The constructor must be overridden, because this is where Backbone
   // internally binds all routes.
   constructor: function(options) {
-    var SubRouter;
-    // Useful for nested functions...
+    var prefix, SubRouter;
+    // Useful for nested functions
     var manager = this;
     // Use for normal routes
     var routes = {};
@@ -88,7 +88,7 @@ var RouteManager = Backbone.RouteManager = Backbone.Router.extend({
         // Every route needs to be prefixed
         _.each(router.routes, function(callback, path) {
           if (path) {
-            return routes[prefix + path] = callback;
+            return routes[prefix + "/" + path] = callback;
           }
 
           // If the path is "" just set to prefix, this is to comply
@@ -99,13 +99,12 @@ var RouteManager = Backbone.RouteManager = Backbone.Router.extend({
         // Must override with prefixed routes
         router.routes = routes;
 
-        // FIXME Can't touch this!
         // Required to have Backbone set up routes
-        return router.constructor.__super__.constructor.prototype.constructor.__super__.constructor.apply(router, arguments)
+        return Backbone.Router.prototype.constructor.apply(router, arguments);
       }
 
       // Prefix is optional, set to empty string if not passed
-      var prefix = route || "";
+      prefix = route || "";
 
       // Allow for optionally omitting trailing /.  Since base routes do not
       // trigger with a trailing / this is actually kind of important =)
@@ -168,7 +167,7 @@ var RouteManager = Backbone.RouteManager = Backbone.Router.extend({
   // routes irrespective of internal router.  This is crucial to
   // ensure navigation events work as expected.
   navigate: function(route, trigger) {
-    var router, prefix, before, after;
+    var router, prefix, before, after, stop;
     var manager = this;
     var options = this.options;
     var routeExp = manager._routeToRegExp(route);
@@ -181,6 +180,8 @@ var RouteManager = Backbone.RouteManager = Backbone.Router.extend({
         return true;
       }
     });
+
+    console.log(router);
 
     // TODO Ensure filters can be called here...
     // If no router was defined, trigger on the manager
@@ -238,8 +239,13 @@ var RouteManager = Backbone.RouteManager = Backbone.Router.extend({
     // Handle all before handlers
     before && forEach(before, function(callback, index, array) {
       var handler, result;
-      // Put the loop into async
+      // Put the loop into async mode
       var done = this.async();
+
+      // Stop executing callbacks if any value was returned falsly
+      if (stop) {
+        return done();
+      }
 
       // Normalize the callback function, its either a direct reference, on
       // the router or the manager.

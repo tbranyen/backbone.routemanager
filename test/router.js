@@ -69,6 +69,8 @@ module("views", {
 test("basic navigation", function() {
   var harness = this;
 
+  console.log("in basic");
+
   // Trigger the manager route
   harness.router.navigate("", true);
   equal(harness.data.route, "/", "Manager route triggered");
@@ -79,12 +81,12 @@ test("basic navigation", function() {
 });
 
 // Ensure before filters work on sub routers
-test("sub router : before filters", function() {
+test("sub router before filters", function() {
   var harness = this;
+
+  console.log("in filters");
 
   // Test synchronous filters
   harness.router.navigate("sub/sync", true);
   equal(harness.data.route, "sub/sync", "Sync triggered");
-
-
 });
