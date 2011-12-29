@@ -196,7 +196,7 @@ var RouteManager = Backbone.RouteManager = Backbone.Router.extend({
 
     // Detect any filters to run before the route navigate
     before = _.detect(router.before, function(filters, route) {
-      if (routeExp.exec(prefix + route)) {
+      if (routeExp.exec(route)) {
         return true; 
       }
     });
@@ -284,6 +284,7 @@ var RouteManager = Backbone.RouteManager = Backbone.Router.extend({
     
     // Actually navigate
     function() {
+      console.log(router, route, trigger);
       router.navigate(route, trigger);
 
       // I think it's useful to have a global "route" event.  So we'll trigger
