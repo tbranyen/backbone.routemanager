@@ -88,7 +88,7 @@ var RouteManager = Backbone.RouteManager = Backbone.Router.extend({
         // Every route needs to be prefixed
         _.each(router.routes, function(callback, path) {
           if (path) {
-            return routes[prefix + "/" + path] = callback;
+            return routes[prefix + path] = callback;
           }
 
           // If the path is "" just set to prefix, this is to comply
