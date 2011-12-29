@@ -5,6 +5,10 @@ module("views", {
 
     // Set up a test router
     harness.SubRouter = Backbone.RouteManager.Router.extend({
+      before: {
+        "sync": ["sync"]
+      },
+
       routes: {
         "": "test",
         "sync": "sync"
