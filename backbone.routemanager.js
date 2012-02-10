@@ -2,17 +2,13 @@
  * Copyright 2011, Tim Branyen (@tbranyen)
  * backbone.routemanager.js may be freely distributed under the MIT license.
  */
+(function(Backbone, _, $) {
+
+"use strict";
 
 /* JavaScript Sync/Async forEach - v0.1.2 - 11/17/2011
  * http://github.com/cowboy/javascript-sync-async-foreach
  * Copyright (c) 2011 "Cowboy" Ben Alman; Licensed MIT, GPL */
-(function(Backbone, _, $) {
-
-// Enforce strict mode
-"use strict";
-
-// @cowboy's forEach implementation to iterate synchronously or
-// asynchronously.
 function forEach(arr, eachFn, doneFn) {
   var i = -1;
   // Resolve array length to a valid (ToUint32) number.
@@ -63,8 +59,7 @@ function forEach(arr, eachFn, doneFn) {
   }());
 }
 
-// RouteManager at its core is specifically a Backbone.Router
-var RouteManager = Backbone.RouteManager = Backbone.Router.extend({
+var RouteManager = Backbone.Router.extend({
   // The constructor must be overridden, because this is where Backbone
   // internally binds all routes.
   constructor: function(options) {
