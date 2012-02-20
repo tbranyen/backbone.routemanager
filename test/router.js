@@ -1,25 +1,13 @@
-module("views", {
+module("routes", {
   setup: function() {
     var harness = this;
     harness.data = {};
 
     // Set up a test router
-    harness.SubRouter = Backbone.RouteManager.Router.extend({
-      before: {
-        "sync": ["sync"]
-      },
-
+    harness.SubRouter = Backbone.Router.extend({
       routes: {
         "": "test",
         "sync": "sync"
-      },
-
-      before: {
-        "sub/sync": ["syncFilter"]
-      },
-
-      syncFilter: function() {
-        return "lol";
       },
 
       test: function() {
@@ -57,26 +45,24 @@ module("views", {
     });
 
     // Do not trigger the initial route
-    try {
-      Backbone.history.start({ silent: true });
-    } catch (ex) {}
   },
 
   teardown: function() {
     var handler = this;
 
     handler.router.navigate("", false);
+    Backbone.history.stop();
   }
 });
 
 // Ensure the basic navigation still works like normal routers
-test("basic navigation", function() {
+test("navigation", function() {
+  expect(2);
+
   var harness = this;
 
-  console.log("in basic");
-
   // Trigger the manager route
-  harness.router.navigate("", true);
+  Backbone.history.start();
   equal(harness.data.route, "/", "Manager route triggered");
 
   // Trigger the sub route
@@ -84,13 +70,31 @@ test("basic navigation", function() {
   equal(harness.data.route, "sub/", "Sub route triggered");
 });
 
-// Ensure before filters work on sub routers
-test("sub router before filters", function() {
+test("events", function() {
+  expect(2);
+
   var harness = this;
 
-  console.log("in filters");
+  // Trigger the manager route
+  harness.router.on("route:index", function() {
+    ok(true, "Route manager event triggered");
+  });
 
-  // Test synchronous filters
-  harness.router.navigate("sub/sync", true);
-  equal(harness.data.route, "sub/sync", "Sync triggered");
+  Backbone.history.start();
+
+  // Trigger the sub route
+  harness.router.routers["sub/"].on("route:test", function() {
+    ok(true, "SubRouter event triggered");
+  });
+
+  harness.router.navigate("sub", true);
 });
+
+// Ensure before filters work on sub routers
+//test("filters", function() {
+//  var harness = this;
+//
+//  // Test synchronous filters
+//  harness.router.navigate("sub/sync", true);
+//  equal(harness.data.route, "sub/sync", "Sync triggered");
+//});
