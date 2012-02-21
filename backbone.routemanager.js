@@ -2,10 +2,19 @@
  * Copyright 2012, Tim Branyen (@tbranyen)
  * backbone.routemanager.js may be freely distributed under the MIT license.
  */
-(function(Backbone, _, $) {
+(function(window) {
 
 "use strict";
 
+// Alias the libraries from the global object
+var Backbone = window.Backbone;
+var _ = window._;
+var $ = window.$;
+
+// Cache the Backbone routing RegExp function for later matching
+var routeMatch = Backbone.Router.prototype._routeToRegExp; 
+
+// FIXME Add comment here...
 var RouteManager = Backbone.Router.extend({
   // The constructor must be overridden, because this is where Backbone
   // internally binds all routes.
@@ -52,6 +61,7 @@ var RouteManager = Backbone.Router.extend({
           constructor: function(options) {
             var ctor = Backbone.Router.prototype.constructor;
 
+            // Make sure to prefix all routes
             _.each(this.routes, function(method, route) {
               delete this.routes[route];
 
@@ -65,10 +75,15 @@ var RouteManager = Backbone.Router.extend({
 
         // Initialize the Router inside the collection
         router = routers[route] = new SubRouter();
+        
+        // Give the router state!
+        route._state = {};
 
         // Internal object cache for special RouteManager functionality.
         router.__manager__ = {};
 
+        // If there is a custom constructor function provided by the user;
+        // make sure to be a good samaritan.
         if (_.isFunction(parent)) {
           parent.call(router);
         }
@@ -107,6 +122,25 @@ var RouteManager = Backbone.Router.extend({
   },
 
   navigate: function(fragment, trigger) {
+    var found;
+    
+    // FIXME No more recursion like this if possible
+    (function iterate(router) {
+      found = _.filter(router.before, function(route) {
+        
+      });
+
+      if (!found && router.routers && router.routers.length) {
+        _.each(router.routers, function(router) {
+          return iterate(router);
+        });
+      }
+
+      return found;
+    })(this);
+
+    console.log(found);
+
     Backbone.history.navigate(fragment, trigger);
   }
 },
@@ -120,14 +154,7 @@ var RouteManager = Backbone.Router.extend({
     if (_.isObject(options)) {
       return _.extend(existing, options);
     }
-  },
-
-  Router: Backbone.Router.extend({
-    // This gets passed a custom manage function
-    constructor: function(manage) {
-      return manage(this);
-    }
-  })
+  }
 });
 
 // Default configuration options; designed to be overriden.
@@ -140,4 +167,4 @@ RouteManager.prototype.options = {
 
 Backbone.RouteManager = RouteManager;
 
-}).call(this, this.Backbone, this._, this.jQuery);
+})(this);

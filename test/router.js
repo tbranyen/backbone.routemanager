@@ -5,6 +5,14 @@ module("routes", {
 
     // Set up a test router
     harness.SubRouter = Backbone.Router.extend({
+      before: {
+        "sync": ["beforeSync"]
+      },
+
+      beforeSync: function() {
+        this.beforeSync = true;
+      },
+
       routes: {
         "": "test",
         "sync": "sync"
@@ -91,10 +99,10 @@ test("events", function() {
 });
 
 // Ensure before filters work on sub routers
-//test("filters", function() {
-//  var harness = this;
-//
-//  // Test synchronous filters
-//  harness.router.navigate("sub/sync", true);
-//  equal(harness.data.route, "sub/sync", "Sync triggered");
-//});
+test("filters", function() {
+  var harness = this;
+
+  // Test synchronous filters
+  harness.router.navigate("sub/sync", true);
+  equal(harness.data.route, "sub/sync", "Sync triggered");
+});
