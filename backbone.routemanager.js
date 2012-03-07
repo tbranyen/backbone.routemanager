@@ -122,24 +122,46 @@ var RouteManager = Backbone.Router.extend({
   },
 
   navigate: function(fragment, trigger) {
-    var found;
+    var routes = [];
+    var before = [];
+    var after = [];
     
-    // FIXME No more recursion like this if possible
-    (function iterate(router) {
-      found = _.filter(router.before, function(route) {
-        
-      });
+    // Create a recursive function, to detect all before and after filters.
+    function detectFilters(router) {
+      // Unshift the routes onto the chain, most specific first
+      routes.unshift(router);
 
-      if (!found && router.routers && router.routers.length) {
-        _.each(router.routers, function(router) {
-          return iterate(router);
+      // Ensure the prefix is detected correctly.
+      var prefix = router.__manager__ ? router.__manager__.prefix : "";
+      
+      // Only test for before filters if they haven't been found.
+      if (!before.length) {
+        before = _.filter(router.before, function(filters, route) {
+          return prefix + "/" + route === fragment;
         });
       }
 
-      return found;
-    })(this);
+      // Only test for before filters if they haven't been found.
+      if (!after.length) {
+        after = _.filter(router.after, function(filters, route) {
+          return prefix + "/" + route === fragment;
+        });
+      }
 
-    console.log(found);
+      // If either no before or after have been found and there are nested
+      // routers, continue the search.
+      if (!before.length || !after.length && router.routers) {
+        _.each(router.routers, function(router) {
+          return detectFilters(router);
+        });
+      }
+    }
+    
+    detectFilters(this);
+
+    _.each(before, function(filter) {
+      router[filter].call(router);
+    });
 
     Backbone.history.navigate(fragment, trigger);
   }
