@@ -14,7 +14,6 @@ var $ = window.$;
 // Cache the Backbone routing RegExp function for later matching
 var routeMatch = Backbone.Router.prototype._routeToRegExp; 
 
-// FIXME Add comment here...
 var RouteManager = Backbone.Router.extend({
   // The constructor must be overridden, because this is where Backbone
   // internally binds all routes.
@@ -122,49 +121,88 @@ var RouteManager = Backbone.Router.extend({
   },
 
   navigate: function(fragment, trigger) {
-    var routes = [];
-    var before = [];
-    var after = [];
+    var routers = [];
+    var filters = {};
     
+    // Add to filters.
+    function addFilters(name, prefix) {
+      var router = routers[0];
+      var allFilters = _.chain(router[name]);
+
+      // Ensure the filters array exists.
+      filters[name] = filters[name] || [];
+
+      // Only return filters that match this route.
+      allFilters.filter(function(filters, route) {
+        return prefix + "/" + route === fragment;
+      });
+
+      // Hopefully this and the map operation can be refactored to work
+      // with chain.
+      allFilters = _.reduce(allFilters.value(), function(memo, filter) {
+        return memo.concat(filter);
+      }, []);
+
+      // Change all the filter string identifiers into their respective
+      // functions.
+      allFilters = _.map(allFilters, function(filter) {
+        var root, method;
+
+        // Search for the method most to least specific
+        _.find(routers, function(router) {
+          if (_.isFunction(router[filter])) {
+            root = router;
+
+            return method = router[filter];
+          }
+        });
+
+        // For now we'll just silence and not throw errors for missing
+        // functions.
+        if (!_.isFunction(method)) {
+          method = function() {};
+        }
+
+        return [ root, method ];
+      });
+
+      // Add into the filters object array
+      filters[name] = filters[name].concat(allFilters);
+    }
+
     // Create a recursive function, to detect all before and after filters.
     function detectFilters(router) {
-      // Unshift the routes onto the chain, most specific first
-      routes.unshift(router);
-
       // Ensure the prefix is detected correctly.
-      var prefix = router.__manager__ ? router.__manager__.prefix : "";
-      
-      // Only test for before filters if they haven't been found.
-      if (!before.length) {
-        before = _.filter(router.before, function(filters, route) {
-          return prefix + "/" + route === fragment;
-        });
-      }
+      var prefix = router.__manager__.prefix;
 
-      // Only test for before filters if they haven't been found.
-      if (!after.length) {
-        after = _.filter(router.after, function(filters, route) {
-          return prefix + "/" + route === fragment;
-        });
-      }
+      // Unshift the routers onto the chain, most specific first.
+      routers.unshift(router);
 
-      // If either no before or after have been found and there are nested
-      // routers, continue the search.
-      if (!before.length || !after.length && router.routers) {
+      // Add the before and after filters.
+      addFilters("before", prefix);
+      addFilters("after", prefix);
+
+      // This router wasn't the match, recurse until found.
+      if (router.routers) {
         _.each(router.routers, function(router) {
           return detectFilters(router);
         });
       }
     }
-    
+
+    // Detect all the filters for this router.
     detectFilters(this);
 
-    _.each(before, function(filter) {
-      router[filter].call(router);
+    // Execute all the before filters
+    _.each(filters.before, function(filter) {
+      filter[1].call(filter[0]);
     });
 
+    // Call the before methods.
     Backbone.history.navigate(fragment, trigger);
-  }
+  },
+
+  __manager__: { prefix: "" }
 },
 {
   // This static method allows for global configuration of RouteManager.
