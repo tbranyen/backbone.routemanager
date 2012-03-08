@@ -199,6 +199,7 @@ var RouteManager = Backbone.Router.extend({
     });
 
     // Call the before methods.
+    console.log("frag", fragment);
     Backbone.history.navigate(fragment, trigger);
   },
 

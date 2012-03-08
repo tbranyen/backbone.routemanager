@@ -20,7 +20,7 @@ module("routes", {
 
       test: function() {
         harness.data = {
-          route: "sub/",
+          route: "sub",
           context: this,
           args: arguments
         };
@@ -40,12 +40,23 @@ module("routes", {
       routes: {
         "sub/": harness.SubRouter,
 
-        "": "index"
+        "": "index",
+        "params": "params"
       },
 
       index: function() {
+        console.log("here");
         harness.data = {
-          route: "/",
+          route: "",
+          context: this,
+          args: arguments
+        };
+      },
+
+      params: function() {
+        console.log("HIT");
+        harness.data = {
+          route: "params",
           context: this,
           args: arguments
         };
@@ -71,11 +82,11 @@ test("navigation", function() {
 
   // Trigger the manager route
   Backbone.history.start();
-  equal(harness.data.route, "/", "Manager route triggered");
+  equal(harness.data.route, "", "Manager route triggered");
 
   // Trigger the sub route
   harness.router.navigate("sub", true);
-  equal(harness.data.route, "sub/", "Sub route triggered");
+  equal(harness.data.route, "sub", "Sub route triggered");
 });
 
 test("events", function() {
@@ -109,5 +120,19 @@ test("filters", function() {
   // Test synchronous filters
   harness.router.navigate("sub/sync", true);
   equal(harness.data.route, "sub/sync", "Sync triggered");
+  ok(harness.data.context.beforeSync, "Triggered with correct context");
+});
+
+// Test params object
+test("params", function() {
+  expect(2);
+
+  var harness = this;
+
+  Backbone.history.start();
+
+  // Test synchronous filters
+  harness.router.navigate("params", true);
+  equal(harness.data.route, "params", "Params triggered");
   ok(harness.data.context.beforeSync, "Triggered with correct context");
 });
