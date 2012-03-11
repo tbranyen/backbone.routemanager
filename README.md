@@ -56,7 +56,7 @@ app.router = new AppRouter();
 app.router.navigate("", true);
 ```
 
-## Named params object ##
+### Named params object ###
 
 All route callbacks get access to a special object on the Router called
 `params` which maps directly to the variables and splats defined in the route.
@@ -86,7 +86,7 @@ app.router.navigate("5/hi", true);
 This is useful for a number of reasons including a special significance for
 `before/after` filters that are defined later on.
 
-## Nested Routers ##
+### Nested Routers ###
 
 So far we haven't seen anything special that we couldn't do already with a
 normal `Backbone.Router`.  One of the major benefits of RouteManager is that
@@ -100,11 +100,16 @@ For example:
 ``` javascript
 var SubRouter = Backbone.Router.extend({
   routes: {
-    "": "index"
+    "": "index",
+    "test": "test"
   },
 
   index: function() {
     window.alert("SubRouter navigated successfully");
+  },
+
+  test: function() {
+    window.alert("sub/test triggered correctly");
   }
 });
 
@@ -124,8 +129,15 @@ var AppRouter = Backbone.RouteManager.extend({
 
 // Create a new instance of the app router
 app.router = new AppRouter();
+
+// Trigger the test route under sub
+app.router.navigate("sub/test", true);
 ```
 
 ### Before/After filters ###
 
 To be written...
+
+## Configuration ##
+
+## Release History ##
