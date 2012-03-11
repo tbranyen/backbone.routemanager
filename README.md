@@ -32,8 +32,8 @@ Include in your application *after* jQuery, Underscore, and Backbone have been i
 
 ### Defining a RouteManager ###
 
-A route manager is your **MasterRouter**, you will be able to define any number
-of **SubRouters**, but you will always reference the manager in your navigates.
+A route manager is your **App Router**, you will be able to define any number
+of **Nested Routers**.
 
 *Assuming you have an app namespace*
 
@@ -159,7 +159,7 @@ app.router.navigate("sub/test", true);
 
 The real meat of RouteManager, besides the nested Routers, is the ability to
 define functions to be run before and after a route has fired.  This has huge
-benefits for keeping your Router DRY and and flexible.
+benefits for keeping your Router DRY and flexible.
 
 To define a before and after filter, simply create respectively named objects
 on your Router along with a key/val set matching routes and callbacks.
@@ -190,13 +190,13 @@ Backbone.Router.extend({
 });
 ```
 
-### Automatic params=>arguments mapping ###
+### Automatic params => arguments mapping ###
 
 What is really sweet about these filter functions are that their arguments are
 automatically mapped to the params object based on the name.
 
 ``` javascript
-var SomeRouter = Backbone.Router.extend({
+Backbone.Router.extend({
   before: {
     "user/:id": ["getUser"]
   },

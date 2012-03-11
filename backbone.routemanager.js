@@ -104,25 +104,20 @@ function handleRoute(original, route) {
   // Potentially IE 6-friendly
   // Get the argument names from a given function.
   function detectArgs(fun) {
-    var i, arg;
-    // Store ordered list of all the argument names.
-    var names = [];
-    // First match everything inside the function argument parens. Split the
-    // arguments string into an array comma delimited.
-    var args = fun.toString().match(/function\s+\(([^)]*)\)/)[1].split(", ");
+    // First match everything inside the function argument parens
+    var args = fun.toString().match(/function\s?\(([^)]*)\)/)[1];
 
-    // Iterate over all arguments.
-    for (i = 0; i < args.length; i++) {
-      arg = args[i];
-
-      // Ensure no inline comments are parsed.
+    // Split the arguments string into an array comma delimited
+    return _.chain(args.split(", ")).map(function(arg) {
+      // Ensure no inline comments are parsed and trim the whitespace
       if (arg = arg.replace(/\/\*.*\*\//, "")) {
         // Trim the whitespace and ensure no undefineds are added.
-        names.push(arg.replace(/^\s+|\s+$/g, ""));
+        return arg.replace(/^\s?|\s?$/g, "");
       }
-    }
-
-    return names;
+    }).filter(function(arg) {
+      // Ensure no undefineds are added
+      return arg;
+    }).value();
   }
 
   // Add to filters.
