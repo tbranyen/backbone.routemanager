@@ -6,16 +6,36 @@ module("routes", {
     // Set up a test router
     harness.SubRouter = Backbone.Router.extend({
       before: {
-        "sync": ["beforeSync", "lol"]
+        "sync": ["beforeSync"],
+        "sync/:id": ["handleID"],
+        "sync/:id/:name": ["handleName"]
       },
 
       beforeSync: function() {
         this.beforeSync = true;
       },
 
+      handleID: function(id) {
+        harness.data = {
+          route: "sub/sync/:id",
+          context: this,
+          args: arguments
+        };
+      },
+
+      handleName: function(name) {
+        harness.data = {
+          route: "sub/sync/:id/:name",
+          context: this,
+          args: arguments
+        };
+      },
+
       routes: {
         "": "test",
-        "sync": "sync"
+        "sync": "sync",
+        "sync/:id": "sync",
+        "sync/:id/:name": "sync"
       },
 
       test: function() {
@@ -41,11 +61,10 @@ module("routes", {
         "sub/": harness.SubRouter,
 
         "": "index",
-        "params": "params"
+        "params/:id/*path": "params"
       },
 
       index: function() {
-        console.log("here");
         harness.data = {
           route: "",
           context: this,
@@ -54,7 +73,6 @@ module("routes", {
       },
 
       params: function() {
-        console.log("HIT");
         harness.data = {
           route: "params",
           context: this,
@@ -125,14 +143,34 @@ test("filters", function() {
 
 // Test params object
 test("params", function() {
-  expect(2);
+  expect(4);
 
   var harness = this;
 
   Backbone.history.start();
 
   // Test synchronous filters
-  harness.router.navigate("params", true);
+  harness.router.navigate("params/5/lol/hi", true);
   equal(harness.data.route, "params", "Params triggered");
-  ok(harness.data.context.beforeSync, "Triggered with correct context");
+  equal(typeof harness.data.context.params, "object", "Params is an object");
+
+  equal(harness.data.context.params.id, "5",
+    "Param var contains the right value");
+
+  equal(harness.data.context.params.path, "lol/hi",
+    "Params splat contains the right value");
+});
+
+// Auto params mapping
+test("mapping", function() {
+  expect(2);
+
+  var harness = this;
+
+  Backbone.history.start();
+
+  // Ensure mapping by name works
+  harness.router.navigate("sub/sync/lol", true);
+  equal(harness.data.route, "sub/sync", "Params triggered");
+  equal(harness.data.args[0], "lol", "id mapped correctly");
 });
