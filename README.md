@@ -86,15 +86,14 @@ app.router.navigate("5/hi", true);
 This is useful for a number of reasons including a special significance for
 `before/after` filters that are defined later on.
 
-## SubRouters ##
+## Nested Routers ##
 
 So far we haven't seen anything special that we couldn't do already with a
 normal `Backbone.Router`.  One of the major benefits of RouteManager is that
-you can define SubRouters, or Routers that can be defined independently of
-the RouteManager inside modules, other files, etc. and are tied back into the
-RouteManager under a prefix.
+you can define nested Routers.  These are defined in the same way as normal
+routes, except you pass a `Backbone.Router` class instead.
 
-SubRouters are just normal `Backbone.Router` or Subclassed `Backbone.Router`'s.
+Nested Routers are just normal `Backbone.Router`'s.
 
 For example:
 
