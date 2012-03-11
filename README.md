@@ -39,7 +39,7 @@ of **SubRouters**, but you will always reference the manager in your navigates.
 
 ``` javascript
 // A basic route manager, works just like a Backbone.Router (cause it is one)
-var AppRouter = new Backbone.RouteManager({
+var AppRouter = Backbone.RouteManager.extend({
   routes: {
     "": "index"
   },
@@ -51,6 +51,27 @@ var AppRouter = new Backbone.RouteManager({
 
 // Create a new instance of the app router
 app.router = new AppRouter();
+
+// Trigger the index route
+app.router.navigate("", true);
+```
+
+#### Alternative method of defining a RouteManager ####
+
+If you don't wish to extend the `Backbone.RouteManager` you can simply make a
+new instance of the constructor and assign that to save yourself a step.
+
+``` javascript
+// A basic route manager, works just like a Backbone.Router (cause it is one)
+app.router = new Backbone.RouteManager({
+  routes: {
+    "": "index"
+  },
+
+  index: function() {
+    window.alert("Navigated successfully");
+  }
+});
 
 // Trigger the index route
 app.router.navigate("", true);
