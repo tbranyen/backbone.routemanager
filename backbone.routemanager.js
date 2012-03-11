@@ -6,17 +6,100 @@
 
 "use strict";
 
-// 
+// @cowboy's forEach implementation to iterate synchronously or
+// asynchronously.
+function forEach(arr, eachFn, doneFn) {
+  var i = -1;
+  // Resolve array length to a valid (ToUint32) number.
+  var len = arr.length >>> 0;
+
+  // This IIFE is called once now, and then again, by name, for each loop
+  // iteration.
+  (function next(result) {
+    // This flag will be set to true if `this.async` is called inside the
+    // eachFn` callback.
+    var async;
+    // Was false returned from the `eachFn` callback or passed to the
+    // `this.async` done function?
+    var abort = result === false;
+
+    // Increment counter variable and skip any indices that don't exist. This
+    // allows sparse arrays to be iterated.
+    do { ++i; } while (!(i in arr) && i !== len);
+
+    // Exit if result passed to `this.async` done function or returned from
+    // the `eachFn` callback was false, or when done iterating.
+    if (abort || i === len) {
+      // If a `doneFn` callback was specified, invoke that now. Pass in a
+      // boolean value representing "not aborted" state along with the array.
+      if (doneFn) {
+        doneFn(!abort, arr);
+      }
+      return;
+    }
+
+    // Invoke the `eachFn` callback, setting `this` inside the callback to a
+    // custom object that contains one method, and passing in the array item,
+    // index, and the array.
+    result = eachFn.call({
+      // If `this.async` is called inside the `eachFn` callback, set the async
+      // flag and return a function that can be used to continue iterating.
+      async: function() {
+        async = true;
+        return next;
+      }
+    }, arr[i], i, arr);
+
+    // If the async flag wasn't set, continue by calling `next` synchronously,
+    // passing in the result of the `eachFn` callback.
+    if (!async) {
+      next(result);
+    }
+  }());
+}
+
+// Wraps a route and provides the before/after filters and params object
 function handleRoute(original, route) {
   var fragment;
   var filters = [];
   var routers = [];
   var router = this;
+  var options = router.options;
 
   // Detect the identiifers out of the route
   var identifiers = _.map(route.match(/:(\w+)|\*(\w+)/g), function(arg) {
     return arg.slice(1);
   });
+
+  // Returns an object that provides asynchronous or
+  // deferrable capabilities.
+  function async(done) {
+    var handler = options.deferred();
+
+    // Used to handle asynchronous filters
+    handler.async = function() {
+      handler._isAsync = true;
+
+      return done;
+    };
+
+    // Used to handle deferred filters
+    handler.defer = function() {
+      handler._isDefer = true;
+
+      var deferred = options.deferred();
+
+      // Add to the list of deferreds
+      async._bucket.push(deferred);
+
+      return deferred;
+    };
+
+    return handler;
+  }
+
+  // Attach an array reference to contain all the deferreds
+  async._bucket = [];
 
   // Potentially IE 6-friendly
   // Get the argument names from a given function.
@@ -111,6 +194,7 @@ function handleRoute(original, route) {
   // Replace the route function with the wrapped version
   return function() {
     var args = arguments;
+    var router = this;
 
     fragment = Backbone.history.fragment;
 
@@ -126,24 +210,74 @@ function handleRoute(original, route) {
     detectFilters(router);
 
     // Execute all the before filters
-    _.each(filters.before, function(filter) {
-      var newArgs = [];
+    forEach(filters.before, function(filter) {
+      var handler, result;
+      var args = [];
+      // Put the loop into async
+      var done = this.async();
+
+      // Assign a new async/defer handler
+      handler = async(function() {
+        done.apply(this, arguments);
+      });
 
       // Remap arguments to named `this.params`
       _.each(detectArgs(original), function(arg, i) {
-        newArgs[i] = this.params[arg];
-      }, this);
+        args[i] = router.params[arg];
+      });
       
-      filter[1].apply(filter[0], newArgs);
-    }, this);
+      // Call the filter method with the correct router and arguments
+      result = filter[1].apply(filter[0], args);
 
-    // Call the original router
-    original.apply(router, arguments);
+      // If not a deferred, check if there are any and execute them first
+      if (!handler.isDefer && async._bucket.length) {
+        options.when(async._bucket).always(function() {
+          // Reset the bucket
+          async._bucket.splice(0, async._bucket.length);
 
-    // Reset routers and filters after calling the before/after and route
-    // callbacks
-    routers = [];
-    filters = [];
+          // If not async, go to the next one
+          if (!handler._isAsync) {
+            done(result);
+          }
+        });
+
+        return;
+      }
+      
+      // Add to deferred queue and continue
+      if (handler.isDefer) {
+        handler._bucket.push(result);
+
+      // Is not async or deferred
+      } else {
+        // Skip to next function
+        done(result);
+      }
+    },
+    
+    // Actually navigate the original route and then call the after callbacks
+    function() {
+      // Call the original router
+      original.apply(router, args);
+
+      // Call after callbacks
+      _.each(filters.after, function(filter) {
+        var newArgs = [];
+
+        // Remap arguments to named `this.params`
+        _.each(detectArgs(original), function(arg, i) {
+          newArgs[i] = router.params[arg];
+        });
+        
+        filter[1].apply(filter[0], newArgs);
+      });
+
+      // Reset routers and filters after calling the before/after and route
+      // callbacks
+      routers = [];
+      filters = [];
+    });
+
   };
 }
 
@@ -210,7 +344,10 @@ var RouteManager = Backbone.Router.extend({
             }, this);
 
             return ctor.apply(this, arguments);
-          }
+          },
+
+          // Overrideable options
+          options: Backbone.RouteManager.prototype.options
         });
 
         // Initialize the Router inside the collection
@@ -285,6 +422,11 @@ RouteManager.prototype.options = {
   // Can be used to supply a different deferred that implements Promises/A.
   deferred: function() {
     return $.Deferred();
+  },
+
+  // Return a deferred for when all promises resolve/reject.
+  when: function(promises) {
+    return $.when.apply(null, promises);
   }
 };
 

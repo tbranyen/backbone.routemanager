@@ -159,6 +159,26 @@ app.router.navigate("sub/test", true);
 
 To be written...
 
-## Configuration ##
+### Defaults ###
+
+* __Deferred__:
+Uses jQuery deferreds for internal operation, this may be overridden to use
+a different Promises/A compliant deferred.
+
+``` javascript
+deferred: function() {
+  return $.Deferred();
+}
+```
+
+* __When__:
+This function will trigger callbacks based on the success/failure of one or
+more deferred objects.
+
+``` javascript
+when: function(promises) {
+  return $.when.apply(null, promises);
+}
+```
 
 ## Release History ##
