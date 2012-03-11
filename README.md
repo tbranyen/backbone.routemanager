@@ -157,7 +157,86 @@ app.router.navigate("sub/test", true);
 
 ### Before/After filters ###
 
-To be written...
+The real meat of RouteManager, besides the nested Routers, is the ability to
+define functions to be run before and after a route has fired.  This has huge
+benefits for keeping your Router DRY and and flexible.
+
+To define a before and after filter, simply create respectively named objects
+on your Router along with a key/val set matching routes and callbacks.
+
+``` javascript
+Backbone.Router.extend({
+  before: {
+    "": ["auth", "layout"]
+  },
+
+  after: {
+    "": ["render"]
+  }
+
+  routes: {
+    "": "index"
+  },
+
+  // Before callbacks
+  auth: function() {}
+  layout: function() {}
+
+  // Route callbacks
+  index: function() {}
+
+  // After callbacks
+  render: function() {}
+});
+```
+
+### Automatic params=>arguments mapping ###
+
+What is really sweet about these filter functions are that their arguments are
+automatically mapped to the params object based on the name.
+
+``` javascript
+var SomeRouter = Backbone.Router.extend({
+  before: {
+    "user/:id": ["getUser"]
+  },
+
+  routes: {
+    "": "index"
+  },
+
+  // Before callbacks
+  getUser: function(id) {
+    // id maps to this.params.id or whatever value is passed in
+    console.log(id);
+  }
+
+  // Route callbacks
+  index: function() {}
+});
+```
+
+What makes this great, aside from the ability to selectively choose what
+variables you care about for a particular route, is that you can now re-use
+these functions outside the filters array.
+
+``` javascript
+// Since you are calling this function on its own, the id will be mapped to
+// whatever value you'd like, without needing `this.params`.
+router.getUser(5);
+```
+
+### Synchronous filters ###
+
+Show example
+
+### Asynchronous filters ###
+
+Show example
+
+### Deferred/Promise filters ###
+
+Show example
 
 ## Configuration ##
 
