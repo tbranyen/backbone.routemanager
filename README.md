@@ -247,8 +247,8 @@ section.
 
 ### Synchronous filters ###
 
-These are most basic filter and require nothing special to use.  Just create
-normal functions that should be executed before a route.
+These are the most basic filter and require nothing special to use.  Just
+create normal functions that should be executed before a route.
 
 ``` javascript
 Backbone.Router.extend({
@@ -361,6 +361,7 @@ to not be called, simply call `reject` on the deferred.
       deferred.reject();
     }, 1000);
   },
+```
 
 ## Configuration ##
 
