@@ -159,6 +159,54 @@ app.router.navigate("sub/test", true);
 
 To be written...
 
+## Configuration ##
+
+Overriding RouteManager options has been designed to work just like
+`Backbone.sync`.  You can override at a global level using
+`RouteManager.configure` or you can specify when instantiating a
+`RouteManager` instance.
+
+### Global level ###
+
+Lets say you wanted to use underscore.deferred for the Promise lib instead of
+jQuery.
+
+``` javascript
+// Override all RouteManagers to use underscore.deferred
+Backbone.RouteManager.configure({
+  deferred: function() {
+    return new _.Deferred();
+  },
+
+  when: function(promises) {
+    return _.when.apply(null, promises);
+  }
+});
+```
+
+### Instance level ###
+
+In this specific router, use underscore.deferred for the Promise lib instead of
+jQuery.
+
+``` javascript
+app.router = new Backbone.RouteManager({
+  routes: {
+    "": "index"
+  },
+
+  options: {
+    deferred: function() {
+      return new _.Deferred();
+    },
+
+    when: function(promises) {
+      return _.when.apply(null, promises);
+    }
+  }
+});
+```
+
 ### Defaults ###
 
 * __Deferred__:
