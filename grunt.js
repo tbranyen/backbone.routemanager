@@ -25,7 +25,8 @@ config.init({
       sub: true,
       undef: true,
       eqnull: true,
-      node: true
+      node: true,
+      validthis: true
     },
     globals: {}
   },
