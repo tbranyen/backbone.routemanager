@@ -39,7 +39,7 @@ of **SubRouters**, but you will always reference the manager in your navigates.
 
 ``` javascript
 // A basic route manager, works just like a Backbone.Router (cause it is one)
-app.router = new Backbone.RouteManager({
+var AppRouter = new Backbone.RouteManager({
   routes: {
     "": "index"
   },
@@ -49,9 +49,44 @@ app.router = new Backbone.RouteManager({
   }
 });
 
+// Create a new instance of the app router
+app.router = new AppRouter();
+
 // Trigger the index route
 app.router.navigate("", true);
 ```
+
+## Named params object ##
+
+All route callbacks get access to a special object on the Router called
+`params` which maps directly to the variables and splats defined in the route.
+
+``` javascript
+// A basic route manager, works just like a Backbone.Router (cause it is one)
+var AppRouter = new Backbone.RouteManager({
+  routes: {
+    ":id/*path": "index"
+  },
+
+  index: function(id, path) {
+    // You can use the arbitrarily named args you define... or you can use the
+    // params object on the router.
+    window.alert(id == this.params.id);
+    window.alert(path == this.params.path);
+  }
+});
+
+// Create a new instance of the app router
+app.router = new AppRouter();
+
+// Trigger the index route
+app.router.navigate("5/hi", true);
+```
+
+This is useful for a number of reasons including a special significance for
+`before/after` filters that are defined later on.
+
+## SubRouters ##
 
 So far we haven't seen anything special that we couldn't do already with a
 normal `Backbone.Router`.  One of the major benefits of RouteManager is that
@@ -59,10 +94,12 @@ you can define SubRouters, or Routers that can be defined independently of
 the RouteManager inside modules, other files, etc. and are tied back into the
 RouteManager under a prefix.
 
+SubRouters are just normal `Backbone.Router` or Subclassed `Backbone.Router`'s.
+
 For example:
 
 ``` javascript
-var SubRouter = Backbone.RouteManager.Router.extend({
+var SubRouter = Backbone.Router.extend({
   routes: {
     "": "index"
   },
@@ -72,7 +109,7 @@ var SubRouter = Backbone.RouteManager.Router.extend({
   }
 });
 
-app.router = new Backbone.RouteManager({
+var AppRouter = Backbone.RouteManager.extend({
   routes: {
     // Define a root level route
     "": "index",
@@ -85,24 +122,11 @@ app.router = new Backbone.RouteManager({
     window.alert("MasterRouter navigated successfully");
   }
 });
+
+// Create a new instance of the app router
+app.router = new AppRouter();
 ```
 
-You don't have to use the RouteManager.Router either, you can simply use a
-normal Backbone.Router definition, but you will need to override the
-`constructor`.  The RouterManager.Router is a convenience to this task.
+### Before/After filters ###
 
-``` javascript
-var SubRouter = Backbone.Router.extend({
-  constructor: function(route) {
-    return route(this);
-  },
-
-  routes: {
-    "": "index"
-  },
-
-  index: function() {
-    window.alert("SubRouter navigated successfully");
-  }
-});
-```
+To be written...
