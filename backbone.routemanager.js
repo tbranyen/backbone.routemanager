@@ -220,9 +220,12 @@ function handleRoute(original, route) {
       _.each(detectArgs(original), function(arg, i) {
         args[i] = router.params[arg];
       });
+
+      // Ensure a reference to the router exists
+      handler.router = router;
       
       // Call the filter method with the correct router and arguments
-      result = filter[1].apply(filter[0], args);
+      result = filter[1].apply(handler, args);
 
       // If not a deferred, check if there are any and execute them first
       if (!handler.isDefer && async._bucket.length) {

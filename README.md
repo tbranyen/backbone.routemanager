@@ -164,6 +164,11 @@ benefits for keeping your Router DRY and flexible.
 To define a before and after filter, simply create respectively named objects
 on your Router along with a key/val set matching routes and callbacks.
 
+The `this` context inside the filter functions is different from the route
+callback.  `this` is a special object that can put the function in async/defer
+mode (which is discussed later).  It has a reference to the router that can be
+accessed with `this.router` if you wish to store properties or access it.
+
 ``` javascript
 Backbone.Router.extend({
   before: {
@@ -226,17 +231,136 @@ these functions outside the filters array.
 router.getUser(5);
 ```
 
+There are three different types of functions that can be put inside the filters
+array: Synchronous, Asynchronous, and Promise/Deferreds.  These can be mixed
+and matched together to create a logical and performant flow to your route.
+
+Filters run sequentially and will always block the next function until they are
+complete.  This means if you have `["a","b","c"]` as your array of callbacks,
+`a` will have to complete before `b` is executed.  The only exception to this
+is when a Promise/Deferred is encountered and added to the list to resolve.
+
+If you wish to stop the chain at any point (subsequently stopping the route
+callback from triggering as well), you can do this in a number of ways
+depending on the type of filter.  Each way is discussed in the respective
+section.
+
 ### Synchronous filters ###
 
-Show example
+These are most basic filter and require nothing special to use.  Just create
+normal functions that should be executed before a route.
+
+``` javascript
+Backbone.Router.extend({
+  before: {
+    "": ["sync"]
+  },
+
+  sync: function() {
+    console.log("this runs before index");
+  },
+
+  routes: {
+    "": "index"
+  }
+});
+```
+
+To signify an error in your synchronous function to cause remaining functions
+to not be called, simply return false in your function.
+
+``` javascript
+  sync: function() {
+    console.log("not going to run any more filter functions");
+
+    return false;
+  },
+```
 
 ### Asynchronous filters ###
 
-Show example
+``` javascript
+Backbone.Router.extend({
+  before: {
+    "": ["sync", "async"]
+  },
+
+  ...,
+
+  async: function() {
+    var done = this.async();
+
+    window.setTimeout(function() {
+      console.log("this runs after sync and before index");
+
+      // Progress to the next 
+      done();
+    }, 1000);
+  },
+
+  routes: {
+    "": "index"
+  }
+});
+```
+
+To signify an error in your asynchronous function to cause remaining functions
+to not be called, simply call `done` with false.
+
+``` javascript
+  async: function() {
+    var done = this.async();
+
+    window.setTimeout(function() {
+      console.log("this runs after sync and never calls index");
+
+      // Do not progress to the next
+      done(false);
+    }, 1000);
+  },
+```
 
 ### Deferred/Promise filters ###
 
-Show example
+``` javascript
+Backbone.Router.extend({
+  before: {
+    "": ["sync", "async", "defer"]
+  },
+
+  ...,
+
+  defer: function() {
+    var deferred = this.defer();
+
+    window.setTimeout(function() {
+      console.log("this runs after sync, async, and before index");
+
+      // Progress to the next 
+      deferred.resolve();
+    }, 1000);
+  },
+
+  routes: {
+    "": "index"
+  }
+});
+```
+
+To signify an error in your deferred function to cause remaining functions
+to not be called, simply call `reject` on the deferred.
+
+``` javascript
+  defer: function() {
+    var deferred = this.defer();
+
+    window.setTimeout(function() {
+      console.log("this runs after sync, async, and stops index");
+
+      // Do not progress to the next 
+      deferred.reject();
+    }, 1000);
+  },
 
 ## Configuration ##
 

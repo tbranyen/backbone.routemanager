@@ -11,6 +11,14 @@ module("routes", {
         "sync/:id/:name": ["handleName"]
       },
 
+      after: {
+        "sync": ["afterSync"],
+      },
+
+      afterSync: function() {
+        this.afterSync = true;
+      },
+
       beforeSync: function() {
         this.beforeSync = true;
       },
@@ -24,6 +32,8 @@ module("routes", {
       },
 
       handleName: function(name) {
+        var done = this.async();
+
         harness.data = {
           route: "sub/sync/:id/:name",
           context: this,
@@ -127,20 +137,6 @@ test("events", function() {
   harness.router.navigate("sub", true);
 });
 
-// Ensure before filters work on sub routers
-test("filters", function() {
-  expect(2);
-
-  var harness = this;
-
-  Backbone.history.start();
-
-  // Test synchronous filters
-  harness.router.navigate("sub/sync", true);
-  equal(harness.data.route, "sub/sync", "Sync triggered");
-  ok(harness.data.context.beforeSync, "Triggered with correct context");
-});
-
 // Test params object
 test("params", function() {
   expect(4);
@@ -173,4 +169,19 @@ test("mapping", function() {
   harness.router.navigate("sub/sync/lol", true);
   equal(harness.data.route, "sub/sync", "Params triggered");
   equal(harness.data.args[0], "lol", "id mapped correctly");
+});
+
+// Synchronous filters
+test("sync filters", function() {
+  expect(3);
+
+  var harness = this;
+
+  Backbone.history.start();
+
+  // Test synchronous filters
+  harness.router.navigate("sub/sync", true);
+  ok(harness.data.context.beforeSync, "BeforeSync set correctly");
+  equal(harness.data.route, "sub/sync", "Sync triggered");
+  ok(harness.data.context.afterSync, "AfterSync set correctly");
 });
