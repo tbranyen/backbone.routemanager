@@ -8,7 +8,9 @@ module("routes", {
       before: {
         "sync": ["beforeSync"],
         "sync/:id": ["handleID"],
-        "sync/:id/:name": ["handleName"]
+        "sync/:id/:name": ["handleName"],
+
+        "async": ["beforeAsync"]
       },
 
       after: {
@@ -23,6 +25,10 @@ module("routes", {
         this.beforeSync = true;
       },
 
+      beforeAsync: function() {
+        this.beforeAsync = true;
+      },
+
       handleID: function(id) {
         harness.data = {
           route: "sub/sync/:id",
@@ -32,8 +38,6 @@ module("routes", {
       },
 
       handleName: function(name) {
-        var done = this.async();
-
         harness.data = {
           route: "sub/sync/:id/:name",
           context: this,
@@ -62,7 +66,15 @@ module("routes", {
           context: this,
           args: arguments
         };
-      }
+      },
+
+      async: function() {
+        harness.data = {
+          route: "sub/async",
+          context: this,
+          args: arguments
+        };
+      },
     });
 
     // Set up the router
@@ -181,6 +193,21 @@ test("sync filters", function() {
 
   // Test synchronous filters
   harness.router.navigate("sub/sync", true);
+  ok(harness.data.context.beforeSync, "BeforeSync set correctly");
+  equal(harness.data.route, "sub/sync", "Sync triggered");
+  ok(harness.data.context.afterSync, "AfterSync set correctly");
+});
+
+// Asynchronous filters
+asyncTest("async filters", function() {
+  expect(3);
+
+  var harness = this;
+
+  Backbone.history.start();
+
+  // Test synchronous filters
+  harness.router.navigate("sub/async", true);
   ok(harness.data.context.beforeSync, "BeforeSync set correctly");
   equal(harness.data.route, "sub/sync", "Sync triggered");
   ok(harness.data.context.afterSync, "AfterSync set correctly");

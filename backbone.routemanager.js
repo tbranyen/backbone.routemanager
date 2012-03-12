@@ -66,7 +66,7 @@ function handleRoute(original, route) {
   var router = this;
   var options = router.options;
 
-  // Detect the identiifers out of the route
+  // Detect the identifiers out of the route
   var identifiers = _.map(route.match(/:(\w+)|\*(\w+)/g), function(arg) {
     return arg.slice(1);
   });
@@ -100,25 +100,6 @@ function handleRoute(original, route) {
 
   // Attach an array reference to contain all the deferreds
   async._bucket = [];
-
-  // Potentially IE 6-friendly
-  // Get the argument names from a given function.
-  function detectArgs(fun) {
-    // First match everything inside the function argument parens
-    var args = fun.toString().match(/function\s?\(([^)]*)\)/)[1];
-
-    // Split the arguments string into an array comma delimited
-    return _.chain(args.split(", ")).map(function(arg) {
-      // Ensure no inline comments are parsed and trim the whitespace
-      if (arg = arg.replace(/\/\*.*\*\//, "")) {
-        // Trim the whitespace and ensure no undefineds are added.
-        return arg.replace(/^\s?|\s?$/g, "");
-      }
-    }).filter(function(arg) {
-      // Ensure no undefineds are added
-      return arg;
-    }).value();
-  }
 
   // Add to filters.
   function addFilters(name, prefix) {
@@ -216,11 +197,6 @@ function handleRoute(original, route) {
         done.apply(this, arguments);
       });
 
-      // Remap arguments to named `this.params`
-      _.each(detectArgs(original), function(arg, i) {
-        args[i] = router.params[arg];
-      });
-
       // Ensure a reference to the router exists
       handler.router = router;
       
@@ -255,27 +231,33 @@ function handleRoute(original, route) {
     
     // Actually navigate the original route and then call the after callbacks
     function() {
-      // Call the original router
-      original.apply(router, args);
+      // Assign a new async/defer handler for the route to call after filters
+      // once the route has completed.
+      var handler = async(function() {
+        // Call after callbacks
+        _.each(filters.after, function(filter) {
+          var newArgs = [];
 
-      // Call after callbacks
-      _.each(filters.after, function(filter) {
-        var newArgs = [];
-
-        // Remap arguments to named `this.params`
-        _.each(detectArgs(original), function(arg, i) {
-          newArgs[i] = router.params[arg];
+          // Remap arguments to named `this.params`
+          _.each(detectArgs(original), function(arg, i) {
+            newArgs[i] = router.params[arg];
+          });
+          
+          filter[1].apply(filter[0], newArgs);
         });
-        
-        filter[1].apply(filter[0], newArgs);
+
+        // Reset routers and filters after calling the before/after and route
+        // callbacks
+        routers = [];
+        filters = [];
       });
 
-      // Reset routers and filters after calling the before/after and route
-      // callbacks
-      routers = [];
-      filters = [];
-    });
+      // Ensure a reference to the router exists
+      handler.router = router;
 
+      // Call the original router
+      original.apply(router, args);
+    });
   };
 }
 
