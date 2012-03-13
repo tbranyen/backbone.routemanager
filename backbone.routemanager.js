@@ -270,6 +270,11 @@ var RouteManager = Backbone.Router.extend({
   // The constructor must be overridden, because this is where Backbone
   // internally binds all routes.
   constructor: function(options) {
+    // Options are passed in if using the constructor invocation syntax, this
+    // ensures that if the definition syntax is used that options are pulled
+    // from the instance.
+    options = options || {};
+
     // Useful for nested functions
     var root = this;
     // Use for normal routes
@@ -281,9 +286,8 @@ var RouteManager = Backbone.Router.extend({
 
     // Iterate and augment the routes hash to accept Routers
     _.each(normalizedRoutes, function(action, route) {
-      var prefix, parent, router, SubRouter, originalRoute;
-
-      prefix = options.prefix;
+      var parent, router, SubRouter, originalRoute;
+      var prefix = options.prefix;
 
       // Prefix is optional, set to empty string if not passed
       if (!prefix) {
@@ -316,6 +320,7 @@ var RouteManager = Backbone.Router.extend({
             _.each(this.routes, function(method, route) {
               delete this.routes[route];
 
+              // TODO Ensure this part can work with sub/ and sub (optional /)
               route = route ? prefix + "/" + route : prefix;
 
               // Replace the route with the override
@@ -337,16 +342,18 @@ var RouteManager = Backbone.Router.extend({
         route._state = {};
 
         // Internal object cache for special RouteManager functionality.
-        router.__manager__ = {};
+        router.__manager__ = {
+          // Used to avoid multiple lookups for router+prefix
+          prefix: prefix,
+          // Necessary to know the top level Router
+          root: root
+        };
 
         // If there is a custom constructor function provided by the user;
         // make sure to be a good samaritan.
         if (_.isFunction(parent)) {
           parent.call(router);
         }
-
-        // Used to avoid multiple lookups for router+prefix
-        router.__manager__.prefix = prefix;
 
         // No need to delete from this.routes, since the entire object is
         // replaced anyways.
@@ -410,6 +417,7 @@ RouteManager.prototype.options = {
   }
 };
 
+// Expose RouterManager onto Backbone
 Backbone.RouteManager = RouteManager;
 
 })(this);
