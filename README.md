@@ -195,10 +195,12 @@ Backbone.Router.extend({
 });
 ```
 
-### Automatic params => arguments mapping ###
+### Params => arguments mapping ###
 
-What is really sweet about these filter functions are that their arguments are
-automatically mapped to the params object based on the name.
+Your filter functions may need to be callable from outside of the RouteManager
+filter environment.  Therefore no automatic mapping is possible, but there is a
+very simple boolean logic assignment that you can make that ensures your
+functions are correctly callable.
 
 ``` javascript
 Backbone.Router.extend({
@@ -212,6 +214,8 @@ Backbone.Router.extend({
 
   // Before callbacks
   getUser: function(id) {
+    id = id || this.params.id;
+
     // id maps to this.params.id or whatever value is passed in
     console.log(id);
   }
@@ -221,9 +225,7 @@ Backbone.Router.extend({
 });
 ```
 
-What makes this great, aside from the ability to selectively choose what
-variables you care about for a particular route, is that you can now re-use
-these functions outside the filters array.
+Because of this check you can now do something like this:
 
 ``` javascript
 // Since you are calling this function on its own, the id will be mapped to
