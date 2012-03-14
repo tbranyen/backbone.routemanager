@@ -60,7 +60,7 @@ function forEach(arr, eachFn, doneFn) {
 
 // Wraps a route and provides the before/after filters and params object
 function handleRoute(original, route) {
-  var fragment;
+  var fragment, routeName;
   var filters = [];
   var routers = [];
   var router = this;
@@ -115,7 +115,13 @@ function handleRoute(original, route) {
 
     // Only return filters that match this route.
     allFilters = allFilters.filter(function(filters, route) {
-      return route ? [prefix, route].join("/") : prefix === fragment;
+      var match = route ? [prefix, route].join("/") : prefix === fragment;
+
+      if (match) {
+        routeName = route;
+      }
+
+      return match;
     });
 
     // Hopefully this and the map operation can be refactored to work
@@ -244,6 +250,9 @@ function handleRoute(original, route) {
           filter[1].call(filter[0]);
         });
 
+        // Trigger the `after` event.
+        Backbone.history.trigger("after", router, fragment);
+
         // Reset routers and filters after calling the before/after and route
         // callbacks
         routers = [];
@@ -326,7 +335,6 @@ var RouteManager = Backbone.Router.extend({
             _.each(this.routes, function(method, route) {
               delete this.routes[route];
 
-              // TODO Ensure this part can work with sub/ and sub (optional /)
               route = route ? prefix + "/" + route : prefix;
 
               // Replace the route with the override

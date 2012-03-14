@@ -13,6 +13,14 @@ module("routes", {
         "async": ["beforeAsync"]
       },
 
+      routes: {
+        "": "test",
+        "sync": "sync",
+        "sync/:id": "sync",
+        "sync/:id/:name": "sync",
+        "async": "async"
+      },
+
       after: {
         "sync": ["afterSync"],
       },
@@ -26,7 +34,12 @@ module("routes", {
       },
 
       beforeAsync: function() {
-        this.beforeAsync = true;
+        var self = this;
+        var done = self.async();
+        window.setTimeout(function() {
+          self.beforeAsync = true;
+          done();
+        }, 500);
       },
 
       handleID: function(id) {
@@ -43,13 +56,6 @@ module("routes", {
           context: this.router,
           args: arguments
         };
-      },
-
-      routes: {
-        "": "test",
-        "sync": "sync",
-        "sync/:id": "sync",
-        "sync/:id/:name": "sync"
       },
 
       test: function() {
@@ -199,16 +205,23 @@ test("sync filters", function() {
 });
 
 // Asynchronous filters
-//asyncTest("async filters", function() {
-//  expect(3);
-//
-//  var harness = this;
-//
-//  Backbone.history.start();
-//
-//  // Test synchronous filters
-//  harness.router.navigate("sub/async", true);
-//  ok(harness.data.context.beforeSync, "BeforeSync set correctly");
-//  equal(harness.data.route, "sub/sync", "Sync triggered");
-//  ok(harness.data.context.afterSync, "AfterSync set correctly");
-//});
+asyncTest("async filters", function() {
+  expect(2);
+
+  var harness = this;
+
+  Backbone.history.start();
+
+  // Test synchronous filters
+  Backbone.history.on("after", function() {
+    console.log("LOL");
+    ok(harness.data.context.beforeAsync, "BeforeAsync set correctly");
+    equal(harness.data.route, "sub/async", "Async triggered");
+
+    // Unbind
+    Backbone.history.off("after");
+
+    start();
+  });
+  harness.router.navigate("sub/async", true);
+});
