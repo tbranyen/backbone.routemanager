@@ -174,7 +174,7 @@ function handleRoute(original, route) {
   // Replace the route function with the wrapped version
   return function() {
     var args = arguments;
-    var router = this;
+    var router = this.router ? this.router : this;
 
     fragment = Backbone.history.fragment;
 
