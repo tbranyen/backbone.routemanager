@@ -84,16 +84,20 @@ function handleRoute(original, route) {
     };
 
     // Used to handle deferred filters
-    handler.defer = function() {
+    handler.defer = function(deferred) {
       handler._isDefer = true;
 
-      var deferred = options.deferred();
+      // Allow a deferred to be passed in
+      deferred = deferred || options.deferred();
 
       // Add to the list of deferreds
       async._bucket.push(deferred);
 
       return deferred;
     };
+
+    // Expose the function that's passed in if necessary
+    handler._done = done;
 
     return handler;
   }
@@ -110,8 +114,8 @@ function handleRoute(original, route) {
     filters[name] = filters[name] || [];
 
     // Only return filters that match this route.
-    allFilters.filter(function(filters, route) {
-      return prefix + "/" + route === fragment;
+    allFilters = allFilters.filter(function(filters, route) {
+      return route ? [prefix, route].join("/") : prefix === fragment;
     });
 
     // Hopefully this and the map operation can be refactored to work
@@ -182,8 +186,9 @@ function handleRoute(original, route) {
       this.params[arg] = args[i];
     }, this);
 
-    // Detect all the filters for this router.
-    detectFilters(router);
+    // Detect all the filters for the root router if it exists otherwise start
+    // with this router.
+    detectFilters(router.__manager__.root || router);
 
     // Execute all the before filters
     forEach(filters.before, function(filter) {
@@ -236,14 +241,7 @@ function handleRoute(original, route) {
       var handler = async(function() {
         // Call after callbacks
         _.each(filters.after, function(filter) {
-          var newArgs = [];
-
-          // Remap arguments to named `this.params`
-          _.each(detectArgs(original), function(arg, i) {
-            newArgs[i] = router.params[arg];
-          });
-          
-          filter[1].apply(filter[0], newArgs);
+          filter[1].call(filter[0]);
         });
 
         // Reset routers and filters after calling the before/after and route
@@ -256,7 +254,15 @@ function handleRoute(original, route) {
       handler.router = router;
 
       // Call the original router
-      original.apply(router, args);
+      if (_.isFunction(original)) {
+        original.apply(handler, args);
+      }
+
+      // If not async call the after filter callbacks and reset state
+      if (!handler._isAsync) {
+        // This is required since the function passed to handler is anonymous.
+        handler._done();
+      }
     });
   };
 }
@@ -273,7 +279,7 @@ var RouteManager = Backbone.Router.extend({
     // Options are passed in if using the constructor invocation syntax, this
     // ensures that if the definition syntax is used that options are pulled
     // from the instance.
-    options = options || {};
+    options = options || this;
 
     // Useful for nested functions
     var root = this;
@@ -282,7 +288,7 @@ var RouteManager = Backbone.Router.extend({
     // Use for attached routers
     var routers = this.routers = {};
     // Router attached routes, normalized
-    var normalizedRoutes = options.routes || this.routes;
+    var normalizedRoutes = options.routes;
 
     // Iterate and augment the routes hash to accept Routers
     _.each(normalizedRoutes, function(action, route) {
@@ -368,8 +374,11 @@ var RouteManager = Backbone.Router.extend({
         // currently inside the options object.
         root[action] = handleRoute.call(root, options[action], route);
 
-        // Remove once the swap has occured.
-        delete options[action];
+        // Remove once the swap has occured.  Only do this if the options is
+        // not the current context.
+        if (options !== root) {
+          delete options[action];
+        }
         
         // Add route to collection of "normal" routes, ensure prefixing.
         if (route) {
