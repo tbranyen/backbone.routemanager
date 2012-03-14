@@ -281,6 +281,14 @@ to not be called, simply return false in your function.
 
 ### Asynchronous filters ###
 
+When your code is affected by a non-blocking call (think XHR, setTimeout, etc),
+the above synchronous definition cannot work, as there would be no way to tell
+RouteManager when the function is done.
+
+To put the function into *asynchronous mode* simply assign a done callback with
+`var done = this.async()` and call `done()` when you are finished in the
+function.
+
 ``` javascript
 Backbone.Router.extend({
   before: {
@@ -324,6 +332,16 @@ to not be called, simply call `done` with false.
 
 ### Deferred/Promise filters ###
 
+There may be times that you will work with asynchronous code that can be
+run in parallel.  The deferred filter mode was designed for this use case.  
+When RouteManager encounters a deferred filter it puts it into a bucket and
+continues on to the next function, it will continue grouping all deferreds
+until it hits a non-deferred in which it will wait till they resolve and then
+execute.
+
+To put a filter function into the deferred mode, simply assign `this.defer` to
+a variable and call `resolve` or `reject` when its finished.
+
 ``` javascript
 Backbone.Router.extend({
   before: {
@@ -347,6 +365,17 @@ Backbone.Router.extend({
     "": "index"
   }
 });
+```
+
+It may be useful to leverage an existing deferred instead of creating a new
+one.  This is particularly useful when calling `fetch` on models and
+collections.  Simply pass the deferred to `defer` and it will be used
+internally.
+
+``` javascript
+defer: function() {
+  this.defer(collection.fetch());
+}
 ```
 
 To signify an error in your deferred function to cause remaining functions
