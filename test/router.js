@@ -214,7 +214,6 @@ asyncTest("async filters", function() {
 
   // Test synchronous filters
   Backbone.history.on("after", function() {
-    console.log("LOL");
     ok(harness.data.context.beforeAsync, "BeforeAsync set correctly");
     equal(harness.data.route, "sub/async", "Async triggered");
 

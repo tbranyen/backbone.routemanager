@@ -1,4 +1,4 @@
-/* backbone.routemanager.js v0.0.0
+/* backbone.routemanager.js v0.1.0
  * Copyright 2012, Tim Branyen (@tbranyen)
  * backbone.routemanager.js may be freely distributed under the MIT license.
  */
@@ -180,6 +180,8 @@ function handleRoute(original, route) {
   // Replace the route function with the wrapped version
   return function() {
     var args = arguments;
+    // Its possible this function's context will be set to pull the wrong
+    // router, ensure the correct property is selected.
     var router = this.router ? this.router : this;
 
     fragment = Backbone.history.fragment;
