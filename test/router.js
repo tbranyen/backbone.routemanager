@@ -199,9 +199,9 @@ test("sync filters", function() {
 
   // Test synchronous filters
   harness.router.navigate("sub/sync", true);
-  ok(harness.data.context.beforeSync, "BeforeSync set correctly");
+  ok(harness.data.context.beforeSync, "beforeSync set correctly");
   equal(harness.data.route, "sub/sync", "Sync triggered");
-  ok(harness.data.context.afterSync, "AfterSync set correctly");
+  ok(harness.data.context.afterSync, "afterSync set correctly");
 });
 
 // Asynchronous filters
@@ -214,7 +214,7 @@ asyncTest("async filters", function() {
 
   // Test synchronous filters
   Backbone.history.on("after", function() {
-    ok(harness.data.context.beforeAsync, "BeforeAsync set correctly");
+    ok(harness.data.context.beforeAsync, "beforeAsync set correctly");
     equal(harness.data.route, "sub/async", "Async triggered");
 
     // Unbind

@@ -7,7 +7,8 @@
 "use strict";
 
 // @cowboy's forEach implementation to iterate synchronously or
-// asynchronously.
+// asynchronously.  Used heavily in the filters to know when all callbacks
+// have completed.
 function forEach(arr, eachFn, doneFn) {
   var i = -1;
   // Resolve array length to a valid (ToUint32) number.
@@ -179,6 +180,7 @@ function handleRoute(original, route) {
 
   // Replace the route function with the wrapped version
   return function() {
+    var skip;
     var args = arguments;
     // Its possible this function's context will be set to pull the wrong
     // router, ensure the correct property is selected.
@@ -200,6 +202,9 @@ function handleRoute(original, route) {
 
     // Execute all the before filters
     forEach(filters.before, function(filter) {
+      // If skip has happened 
+      if (skip === true) { return; }
+
       var handler, result;
       var args = [];
       // Put the loop into async
@@ -218,7 +223,7 @@ function handleRoute(original, route) {
 
       // If not a deferred, check if there are any and execute them first
       if (!handler.isDefer && async._bucket.length) {
-        options.when(async._bucket).always(function() {
+        options.when(async._bucket).then(function() {
           // Reset the bucket
           async._bucket.splice(0, async._bucket.length);
 
@@ -226,6 +231,11 @@ function handleRoute(original, route) {
           if (!handler._isAsync) {
             done(result);
           }
+
+        // If something failed in the bucket, call `done()` and set skip to
+        // true
+        }).fail(function() {
+          skip = true;
         });
 
         return;
@@ -237,6 +247,7 @@ function handleRoute(original, route) {
 
       // Is not async or deferred
       } else {
+        // If the result is false specifically
         // Skip to next function
         done(result);
       }
@@ -244,6 +255,10 @@ function handleRoute(original, route) {
     
     // Actually navigate the original route and then call the after callbacks
     function() {
+      // Something failed in the before filters, do not run any of the
+      // following code.
+      if (skip) { return; }
+
       // Assign a new async/defer handler for the route to call after filters
       // once the route has completed.
       var handler = async(function() {
