@@ -1,297 +1,82 @@
+/*!
+ * Sync/Async forEach
+ * https://github.com/cowboy/javascript-sync-async-foreach
+ *
+ * Copyright (c) 2012 "Cowboy" Ben Alman
+ * Licensed under the MIT license.
+ * http://benalman.com/about/license/
+ */
+
+(function(exports) {
+
+  // Iterate synchronously or asynchronously.
+  exports.forEach = function(arr, eachFn, doneFn) {
+    var i = -1;
+    // Resolve array length to a valid (ToUint32) number.
+    var len = arr.length >>> 0;
+
+    // This IIFE is called once now, and then again, by name, for each loop
+    // iteration.
+    (function next(result) {
+      // This flag will be set to true if `this.async` is called inside the
+      // eachFn` callback.
+      var async;
+      // Was false returned from the `eachFn` callback or passed to the
+      // `this.async` done function?
+      var abort = result === false;
+
+      // Increment counter variable and skip any indices that don't exist. This
+      // allows sparse arrays to be iterated.
+      do { ++i; } while (!(i in arr) && i !== len);
+
+      // Exit if result passed to `this.async` done function or returned from
+      // the `eachFn` callback was false, or when done iterating.
+      if (abort || i === len) {
+        // If a `doneFn` callback was specified, invoke that now. Pass in a
+        // boolean value representing "not aborted" state along with the array.
+        if (doneFn) {
+          doneFn(!abort, arr);
+        }
+        return;
+      }
+
+      // Invoke the `eachFn` callback, setting `this` inside the callback to a
+      // custom object that contains one method, and passing in the array item,
+      // index, and the array.
+      result = eachFn.call({
+        // If `this.async` is called inside the `eachFn` callback, set the async
+        // flag and return a function that can be used to continue iterating.
+        async: function() {
+          async = true;
+          return next;
+        }
+      }, arr[i], i, arr);
+
+      // If the async flag wasn't set, continue by calling `next` synchronously,
+      // passing in the result of the `eachFn` callback.
+      if (!async) {
+        next(result);
+      }
+    }());
+  };
+
+}(typeof exports === "object" && exports || this));
+
 /* backbone.routemanager.js v0.1.0
  * Copyright 2012, Tim Branyen (@tbranyen)
  * backbone.routemanager.js may be freely distributed under the MIT license.
  */
 (function(window) {
 
+// 
+// TODO
+// ===========================================
+//
+// * Route unloading, (once you navigate away)
+// * State manager
+//
+
 "use strict";
-
-// @cowboy's forEach implementation to iterate synchronously or
-// asynchronously.  Used heavily in the filters to know when all callbacks
-// have completed.
-function forEach(arr, eachFn, doneFn) {
-  var i = -1;
-  // Resolve array length to a valid (ToUint32) number.
-  var len = arr.length >>> 0;
-
-  // This IIFE is called once now, and then again, by name, for each loop
-  // iteration.
-  (function next(result) {
-    // This flag will be set to true if `this.async` is called inside the
-    // eachFn` callback.
-    var async;
-    // Was false returned from the `eachFn` callback or passed to the
-    // `this.async` done function?
-    var abort = result === false;
-
-    // Increment counter variable and skip any indices that don't exist. This
-    // allows sparse arrays to be iterated.
-    do { ++i; } while (!(i in arr) && i !== len);
-
-    // Exit if result passed to `this.async` done function or returned from
-    // the `eachFn` callback was false, or when done iterating.
-    if (abort || i === len) {
-      // If a `doneFn` callback was specified, invoke that now. Pass in a
-      // boolean value representing "not aborted" state along with the array.
-      if (doneFn) {
-        doneFn(!abort, arr);
-      }
-      return;
-    }
-
-    // Invoke the `eachFn` callback, setting `this` inside the callback to a
-    // custom object that contains one method, and passing in the array item,
-    // index, and the array.
-    result = eachFn.call({
-      // If `this.async` is called inside the `eachFn` callback, set the async
-      // flag and return a function that can be used to continue iterating.
-      async: function() {
-        async = true;
-        return next;
-      }
-    }, arr[i], i, arr);
-
-    // If the async flag wasn't set, continue by calling `next` synchronously,
-    // passing in the result of the `eachFn` callback.
-    if (!async) {
-      next(result);
-    }
-  }());
-}
-
-// Wraps a route and provides the before/after filters and params object
-function handleRoute(original, route) {
-  var fragment, routeName;
-  var filters = [];
-  var routers = [];
-  var router = this;
-  var options = router.options;
-
-  // Detect the identifiers out of the route
-  var identifiers = _.map(route.match(/:(\w+)|\*(\w+)/g), function(arg) {
-    return arg.slice(1);
-  });
-
-  // Returns an object that provides asynchronous or
-  // deferrable capabilities.
-  function async(done) {
-    var handler = options.deferred();
-
-    // Used to handle asynchronous filters
-    handler.async = function() {
-      handler._isAsync = true;
-
-      return done;
-    };
-
-    // Used to handle deferred filters
-    handler.defer = function(deferred) {
-      handler._isDefer = true;
-
-      // Allow a deferred to be passed in
-      deferred = deferred || options.deferred();
-
-      // Add to the list of deferreds
-      async._bucket.push(deferred);
-
-      return deferred;
-    };
-
-    // Expose the function that's passed in if necessary
-    handler._done = done;
-
-    return handler;
-  }
-
-  // Attach an array reference to contain all the deferreds
-  async._bucket = [];
-
-  // Add to filters.
-  function addFilters(name, prefix) {
-    var router = routers[0];
-    var allFilters = _.chain(router[name]);
-
-    // Ensure the filters array exists.
-    filters[name] = filters[name] || [];
-
-    // Only return filters that match this route.
-    allFilters = allFilters.filter(function(filters, route) {
-      var match = route ? [prefix, route].join("/") : prefix === fragment;
-
-      if (match) {
-        routeName = route;
-      }
-
-      return match;
-    });
-
-    // Hopefully this and the map operation can be refactored to work
-    // with chain.
-    allFilters = _.reduce(allFilters.value(), function(memo, filter) {
-      return memo.concat(filter);
-    }, []);
-
-    // Change all the filter string identifiers into their respective
-    // functions.
-    allFilters = _.map(allFilters, function(filter) {
-      var root, method;
-
-      // Search for the method most to least specific
-      _.find(routers, function(router) {
-        if (_.isFunction(router[filter])) {
-          root = router;
-
-          return method = router[filter];
-        }
-      });
-
-      // For now we'll just silence and not throw errors for missing
-      // functions.
-      if (!_.isFunction(method)) {
-        method = function() {};
-      }
-
-      return [ root, method ];
-    });
-
-    // Add into the filters object array
-    filters[name] = filters[name].concat(allFilters);
-  }
-
-  // Create a recursive function, to detect all before and after filters.
-  function detectFilters(router) {
-    // Ensure the prefix is detected correctly.
-    var prefix = router.__manager__.prefix;
-
-    // Unshift the routers onto the chain, most specific first.
-    routers.unshift(router);
-
-    // Add the before and after filters.
-    addFilters("before", prefix);
-    addFilters("after", prefix);
-
-    // This router wasn't the match, recurse until found.
-    if (router.routers) {
-      _.each(router.routers, function(router) {
-        return detectFilters(router);
-      });
-    }
-  }
-
-  // Replace the route function with the wrapped version
-  return function() {
-    var skip;
-    var args = arguments;
-    // Its possible this function's context will be set to pull the wrong
-    // router, ensure the correct property is selected.
-    var router = this.router ? this.router : this;
-
-    fragment = Backbone.history.fragment;
-
-    // Params are a named object
-    this.params = {};
-
-    // Map the arguments to the names inside the params object
-    _.each(identifiers, function(arg, i) {
-      this.params[arg] = args[i];
-    }, this);
-
-    // Detect all the filters for the root router if it exists otherwise start
-    // with this router.
-    detectFilters(router.__manager__.root || router);
-
-    // Execute all the before filters
-    forEach(filters.before, function(filter) {
-      // If skip has happened 
-      if (skip === true) { return; }
-
-      var handler, result;
-      var args = [];
-      // Put the loop into async
-      var done = this.async();
-
-      // Assign a new async/defer handler
-      handler = async(function() {
-        done.apply(this, arguments);
-      });
-
-      // Ensure a reference to the router exists
-      handler.router = router;
-      
-      // Call the filter method with the correct router and arguments
-      result = filter[1].apply(handler, args);
-
-      // If not a deferred, check if there are any and execute them first
-      if (!handler.isDefer && async._bucket.length) {
-        options.when(async._bucket).then(function() {
-          // Reset the bucket
-          async._bucket.splice(0, async._bucket.length);
-
-          // If not async, go to the next one
-          if (!handler._isAsync) {
-            done(result);
-          }
-
-        // If something failed in the bucket, call `done()` and set skip to
-        // true
-        }).fail(function() {
-          skip = true;
-        });
-
-        return;
-      }
-      
-      // Add to deferred queue and continue
-      if (handler.isDefer) {
-        handler._bucket.push(result);
-
-      // Is not async or deferred
-      } else {
-        // If the result is false specifically
-        // Skip to next function
-        done(result);
-      }
-    },
-    
-    // Actually navigate the original route and then call the after callbacks
-    function() {
-      // Something failed in the before filters, do not run any of the
-      // following code.
-      if (skip) { return; }
-
-      // Assign a new async/defer handler for the route to call after filters
-      // once the route has completed.
-      var handler = async(function() {
-        // Call after callbacks
-        _.each(filters.after, function(filter) {
-          filter[1].call(filter[0]);
-        });
-
-        // Trigger the `after` event.
-        Backbone.history.trigger("after", router, fragment);
-
-        // Reset routers and filters after calling the before/after and route
-        // callbacks
-        routers = [];
-        filters = [];
-      });
-
-      // Ensure a reference to the router exists
-      handler.router = router;
-
-      // Call the original router
-      if (_.isFunction(original)) {
-        original.apply(handler, args);
-      }
-
-      // If not async call the after filter callbacks and reset state
-      if (!handler._isAsync) {
-        // This is required since the function passed to handler is anonymous.
-        handler._done();
-      }
-    });
-  };
-}
 
 // Alias the libraries from the global object
 var Backbone = window.Backbone;
@@ -356,7 +141,8 @@ var RouteManager = Backbone.Router.extend({
 
               // Replace the route with the override
               this.routes[route] = method;
-              this[method] = handleRoute.call(this, this[method], route);
+              this[method] = RouteManager.handleRoute.call(this, this[method],
+                route);
             }, this);
 
             return ctor.apply(this, arguments);
@@ -397,7 +183,8 @@ var RouteManager = Backbone.Router.extend({
 
         // Add the route callbacks to the instance, since they are
         // currently inside the options object.
-        root[action] = handleRoute.call(root, options[action], route);
+        root[action] = RouteManager.handleRoute.call(root, options[action],
+          route);
 
         // Remove once the swap has occured.  Only do this if the options is
         // not the current context.
@@ -435,21 +222,141 @@ var RouteManager = Backbone.Router.extend({
     if (_.isObject(options)) {
       return _.extend(existing, options);
     }
-  }
-});
-
-// Default configuration options; designed to be overriden.
-RouteManager.prototype.options = {
-  // Can be used to supply a different deferred that implements Promises/A.
-  deferred: function() {
-    return $.Deferred();
   },
 
-  // Return a deferred for when all promises resolve/reject.
-  when: function(promises) {
-    return $.when.apply(null, promises);
+  // Wraps a route and provides the before/after filters and params object
+  handleRoute: function(original, route) {
+    var fragment, routeName;
+    var filters = [];
+    var routers = [];
+    var router = this;
+    var options = router.options;
+
+    // Detect the identifiers out of the route
+    var identifiers = _.map(route.match(/:(\w+)|\*(\w+)/g), function(arg) {
+      return arg.slice(1);
+    });
+
+    // Add to filters.
+    function addFilters(name, prefix) {
+      var router = routers[0];
+      var allFilters = _.chain(router[name]);
+
+      // Ensure the filters array exists.
+      filters[name] = filters[name] || [];
+
+      // Only return filters that match this route.
+      allFilters = allFilters.filter(function(filters, route) {
+        var match = route ? [prefix, route].join("/") : prefix === fragment;
+
+        if (match) {
+          routeName = route;
+        }
+
+        return match;
+      });
+
+      // Hopefully this and the map operation can be refactored to work
+      // with chain.
+      allFilters = _.reduce(allFilters.value(), function(memo, filter) {
+        return memo.concat(filter);
+      }, []);
+
+      // Change all the filter string identifiers into their respective
+      // functions.
+      allFilters = _.map(allFilters, function(filter) {
+        var root, method;
+
+        // Search for the method most to least specific
+        _.find(routers, function(router) {
+          if (_.isFunction(router[filter])) {
+            root = router;
+
+            return method = router[filter];
+          }
+        });
+
+        // For now we'll just silence and not throw errors for missing
+        // functions.
+        if (!_.isFunction(method)) {
+          method = function() {};
+        }
+
+        return [ root, method ];
+      });
+
+      // Add into the filters object array
+      filters[name] = filters[name].concat(allFilters);
+    }
+
+    // Create a recursive function, to detect all before and after filters.
+    function detectFilters(router) {
+      // Ensure the prefix is detected correctly.
+      var prefix = router.__manager__.prefix;
+
+      // Unshift the routers onto the chain, most specific first.
+      routers.unshift(router);
+
+      // Add the before and after filters.
+      addFilters("before", prefix);
+      addFilters("after", prefix);
+
+      // This router wasn't the match, recurse until found.
+      if (router.routers) {
+        _.each(router.routers, function(router) {
+          return detectFilters(router);
+        });
+      }
+    }
+
+    // Replace the route function with the wrapped version
+    return function() {
+      var args = arguments;
+
+      // Its possible this function's context will be set to pull the wrong
+      // router, ensure the correct property is selected.
+      var router = this;
+
+      fragment = Backbone.history.fragment;
+
+      // Params are a named object
+      this.params = {};
+
+      // Map the arguments to the names inside the params object
+      _.each(identifiers, function(arg, i) {
+        this.params[arg] = args[i];
+      }, this);
+
+      // Detect all the filters for the root router if it exists otherwise start
+      // with this router.
+      detectFilters(router.__manager__.root || router);
+
+      // Execute all the before filters.
+      _.each(filters.before, function(filter) {
+        // Call the filter method with the correct router and arguments.
+        filter[1].apply(this, args);
+      });
+
+      // Call after callbacks.
+      _.each(filters.after, function(filter) {
+        filter[1].call(filter[0]);
+      });
+
+      // Trigger the `after` event.
+      Backbone.history.trigger("after", router, fragment);
+
+      // Reset routers and filters after calling the before/after and route
+      // callbacks
+      routers = [];
+      filters = [];
+
+      // Navigate the original route and then call the after callbacks.
+      if (_.isFunction(original)) {
+        original.apply(this, args);
+      }
+    };
   }
-};
+});
 
 // Expose RouterManager onto Backbone
 Backbone.RouteManager = RouteManager;

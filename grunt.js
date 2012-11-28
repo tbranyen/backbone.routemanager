@@ -1,48 +1,51 @@
-/*global config:true, task:true*/
-config.init({
-  meta: {
-    banner: "/*!\n" + " * backbone.routemanager.js v0.1.0\n" +
-      " * Copyright 2012, Tim Branyen (@tbranyen)\n" +
-      " * backbone.routemanager.js may be freely distributed under" +
-      "the MIT license.\n */"
-  },
+module.exports = function(grunt) {
 
-  lint: {
-    files: ["grunt.js", "backbone.routemanager.js"]
-  },
-
-  min: {
-    "dist/backbone.routemanager.min.js": ["<banner>", 
-      "backbone.routemanager.js"]
-  },
-
-  watch: {
-    files: "<config:lint.files>",
-    tasks: "lint test"
-  },
-
-  jshint: {
-    options: {
-      boss: true,
-      curly: true,
-      eqeqeq: true,
-      immed: false,
-      latedef: true,
-      newcap: true,
-      noarg: true,
-      sub: true,
-      undef: true,
-      eqnull: true,
-      node: true,
-      validthis: true
+  grunt.initConfig({
+    meta: {
+      banner: "/*!\n" + " * backbone.routemanager.js v0.1.0\n" +
+        " * Copyright 2012, Tim Branyen (@tbranyen)\n" +
+        " * backbone.routemanager.js may be freely distributed under" +
+        "the MIT license.\n */"
     },
-    globals: {}
-  },
 
-  qunit: {
-    files: [ "test/**/*.html" ]
-  }
-});
+    lint: {
+      files: ["grunt.js", "backbone.routemanager.js"]
+    },
 
-// Default task.
-task.registerTask("default", "lint qunit min");
+    min: {
+      "dist/backbone.routemanager.min.js": ["<banner>", 
+        "backbone.routemanager.js"]
+    },
+
+    watch: {
+      files: "<config:lint.files>",
+      tasks: "lint test"
+    },
+
+    jshint: {
+      options: {
+        boss: true,
+        curly: true,
+        eqeqeq: true,
+        immed: false,
+        latedef: true,
+        newcap: true,
+        noarg: true,
+        sub: true,
+        undef: true,
+        eqnull: true,
+        node: true,
+        validthis: true
+      },
+      globals: {}
+    },
+
+    qunit: {
+      files: [ "test/**/*.html" ]
+    }
+  });
+
+  // Default task.
+  grunt.task.registerTask("default", "lint qunit min");
+
+};
