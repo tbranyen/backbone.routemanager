@@ -12,11 +12,6 @@ module.exports = function(grunt) {
       files: ["grunt.js", "backbone.routemanager.js"]
     },
 
-    min: {
-      "dist/backbone.routemanager.min.js": ["<banner>", 
-        "backbone.routemanager.js"]
-    },
-
     watch: {
       files: "<config:lint.files>",
       tasks: "lint test"

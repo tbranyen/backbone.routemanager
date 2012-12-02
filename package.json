@@ -1,0 +1,17 @@
+{
+  "name": "backbone.routemanager",
+  "version": "0.1.0",
+  "description": "Better route management for Backbone.js projects",
+  "main": "backbone.routemanager.js",
+  "author": "Tim Branyen (@tbranyen)",
+  "license": "MIT",
+
+  "jam": {
+    "include": ["backbone.routemanager.js"],
+
+    "shim": {
+      "exports": "Backbone.RouteManager",
+      "deps": ["backbone", "jquery", "lodash"]
+    }
+  }
+}
