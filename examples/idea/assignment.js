@@ -7,7 +7,7 @@ Assignment.Router = Backbone.Router.extend({
     // Remaining mapped.
     "assignments": "assignments",
     "assignments/migration": "assignments.migration",
-    "assignemnts/migration/:id": "assignments.migration.detail"
+    "assignments/migration/:id": "assignments.migration.detail"
   },
 
   initialize: function() {
