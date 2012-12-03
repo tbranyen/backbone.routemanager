@@ -1,20 +1,13 @@
-/* backbone.routemanager.js v0.1.0
+/*!
+ * backbone.routemanager.js v0.2.0-wip
  * Copyright 2012, Tim Branyen (@tbranyen)
  * backbone.routemanager.js may be freely distributed under the MIT license.
  */
 (function(window) {
 
-// 
-// TODO
-// ===========================================
-//
-// * Route unloading, (once you navigate away)
-// * State manager
-//
-
 "use strict";
 
-// Alias the libraries from the global object
+// Localize global dependency references.
 var Backbone = window.Backbone;
 var _ = window._;
 var $ = window.$;

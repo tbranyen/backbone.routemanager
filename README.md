@@ -1,5 +1,5 @@
-backbone.routemanager
-=====================
+backbone.routemanager v0.2.0-wip
+================================
 
 Created by Tim Branyen [@tbranyen](http://twitter.com/tbranyen)
 
@@ -7,8 +7,6 @@ Provides missing features to the Backbone.Router.
 
 Depends on Underscore, Backbone and jQuery.  You can swap out the jQuery
 dependency completely with a custom configuration.
-
-## Tutorials and Screencasts ##
 
 ## Download & Include ##
 
@@ -57,8 +55,8 @@ app.router.navigate("", true);
 
 #### Alternative method of defining a RouteManager ####
 
-If you don't wish to extend the `Backbone.RouteManager` you can simply make a
-new instance of the constructor and assign that to save yourself a step.
+If you don't wish to extend `Backbone.RouteManager`, you can simply make a new
+instance of the constructor and assign that to save a step.
 
 ``` javascript
 // A basic route manager, works just like a Backbone.Router (cause it is one)
