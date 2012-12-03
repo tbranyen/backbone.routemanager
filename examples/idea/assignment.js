@@ -10,11 +10,15 @@ Assignment.Router = Backbone.Router.extend({
     "assignemnts/migration/:id": "assignments.migration.detail"
   },
 
+  initialize: function() {
+    this.page = new Page.Model();
+  },
+
   // Define the state tree.
   assignments: {
     enter: function() {
       // Top level, create a new Page model.
-      this.page = new Page.Model({
+      this.page.set({
         title: "Assignments",
 
         // The model will automatically attach it to the `app.layout`.
