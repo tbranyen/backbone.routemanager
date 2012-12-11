@@ -73,7 +73,11 @@ var RouteManager = Backbone.Router.extend({
             _.each(this.routes, function(method, route) {
               delete this.routes[route];
 
-              route = route ? prefix + "/" + route : prefix;
+              route = route ? prefix + route : prefix;
+
+              if (route[route.length-1] === "/") {
+                route = route.slice(0, route.length-1);
+              }
 
               // Replace the route with the override
               this.routes[route] = method;
