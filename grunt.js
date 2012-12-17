@@ -1,4 +1,5 @@
 module.exports = function(grunt) {
+  "use strict";
 
   grunt.initConfig({
     meta: {
@@ -29,18 +30,18 @@ module.exports = function(grunt) {
         sub: true,
         undef: true,
         eqnull: true,
-        node: true,
-        validthis: true
+        node: true
       },
       globals: {}
     },
 
     qunit: {
-      files: [ "test/**/*.html" ]
+      underscore: ["test/underscore.html"],
+      lodash: ["test/lodash.html"]
     }
   });
 
   // Default task.
-  grunt.task.registerTask("default", "lint qunit min");
+  grunt.task.registerTask("default", "lint qunit:underscore qunit:lodash");
 
 };
