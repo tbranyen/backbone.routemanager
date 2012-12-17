@@ -42,8 +42,8 @@ var RouteManager = Backbone.Router.extend({
 
       // Allow for optionally omitting trailing /.  Since base routes do not
       // trigger with a trailing / this is actually kind of important =).
-      if (prefix[prefix.length-1] === "/") {
-        prefix = prefix.slice(0, prefix.length-1);
+      if (prefix.charAt(prefix.length-1) === "/") {
+        prefix = prefix.substr(0, prefix.length-1);
       }
 
       // SubRouter constructors need to be augmented to allow for filters, they
