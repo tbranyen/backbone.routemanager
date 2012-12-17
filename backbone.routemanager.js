@@ -44,10 +44,6 @@ var RouteManager = Backbone.Router.extend({
       // trigger with a trailing / this is actually kind of important =).
       if (prefix[prefix.length-1] === "/") {
         prefix = prefix.slice(0, prefix.length-1);
-
-      // If a prefix exists, add a trailing /.
-      } else if (prefix) {
-        prefix += "/";
       }
 
       // SubRouter constructors need to be augmented to allow for filters, they
