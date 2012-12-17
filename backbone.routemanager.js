@@ -58,6 +58,9 @@ var RouteManager = Backbone.Router.extend({
           constructor: function(options) {
             var ctor = Backbone.Router.prototype.constructor;
 
+            // keep routes in a separate hash or IE<9 reloop over new object index
+            var tempRoutes = {};
+
             // Make sure to prefix all routes.
             _.each(this.routes, function(method, route) {
               delete this.routes[route];
@@ -65,10 +68,12 @@ var RouteManager = Backbone.Router.extend({
               route = route ? prefix + "/" + route : prefix;
 
               // Replace the route with the override.
-              this.routes[route] = method;
+              tempRoutes[route] = method;
               this[method] = RouteManager.handleRoute.call(this, this[method],
                 route);
             }, this);
+
+            this.routes = tempRoutes;
 
             return ctor.apply(this, arguments);
           },
