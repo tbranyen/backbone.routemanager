@@ -42,12 +42,8 @@ var RouteManager = Backbone.Router.extend({
 
       // Allow for optionally omitting trailing /.  Since base routes do not
       // trigger with a trailing / this is actually kind of important =).
-      if (prefix[prefix.length-1] === "/") {
-        prefix = prefix.slice(0, prefix.length-1);
-
-      // If a prefix exists, add a trailing /.
-      } else if (prefix) {
-        prefix += "/";
+      if (prefix.charAt(prefix.length-1) === "/") {
+        prefix = prefix.substr(0, prefix.length-1);
       }
 
       // SubRouter constructors need to be augmented to allow for filters, they
@@ -62,6 +58,9 @@ var RouteManager = Backbone.Router.extend({
           constructor: function(options) {
             var ctor = Backbone.Router.prototype.constructor;
 
+            // keep routes in a separate hash or IE<9 reloop over new object index
+            var tempRoutes = {};
+
             // Make sure to prefix all routes.
             _.each(this.routes, function(method, route) {
               delete this.routes[route];
@@ -69,10 +68,12 @@ var RouteManager = Backbone.Router.extend({
               route = route ? prefix + "/" + route : prefix;
 
               // Replace the route with the override.
-              this.routes[route] = method;
+              tempRoutes[route] = method;
               this[method] = RouteManager.handleRoute.call(this, this[method],
                 route);
             }, this);
+
+            this.routes = tempRoutes;
 
             return ctor.apply(this, arguments);
           },
