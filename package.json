@@ -2,9 +2,23 @@
   "name": "backbone.routemanager",
   "version": "0.1.0",
   "description": "Better route management for Backbone.js projects",
-  "main": "backbone.routemanager.js",
+  "main": "node/index",
   "author": "Tim Branyen (@tbranyen)",
   "license": "MIT",
+
+  "dependencies": {
+    "backbone": "~0.9",
+    "underscore.deferred": "~0.4",
+    "express": "~3.1",
+    "underscore": "~1.4"
+  },
+
+  "devDependencies": {
+    "grunt": "~0.3",
+    "grunt-contrib-jshint": "0.1.1rc6"
+    "grunt-mocha": "*"
+    "grunt-simple-mocha": "~0.3.2"
+  },
 
   "jam": {
     "include": ["backbone.routemanager.js"],

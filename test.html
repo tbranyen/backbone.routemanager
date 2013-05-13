@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+
+  <title>Test</title>
+</head>
+<body>
+  <script src="test/vendor/jquery.js"></script>
+  <script src="test/vendor/underscore.js"></script>
+  <script src="test/vendor/backbone.js"></script>
+  <script src="backbone.routemanager.js"></script>
+
+  <script>
+    var AppRouter = Backbone.Router.extend({
+      prefix: "lol/"
+    });
+
+    var appRouter = new AppRouter({
+      routes: {
+        // TODO Make this possible to be a function value.
+        lol: "hi"
+      },
+
+      hi: function() {
+
+      },
+
+      prefix: "lol"
+    });
+  </script>
+</body>
+</html>

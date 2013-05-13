@@ -1,16 +1,25 @@
 /*!
  * backbone.routemanager.js v0.2.0-wip
- * Copyright 2012, Tim Branyen (@tbranyen)
+ * Copyright 2013, Tim Branyen (@tbranyen)
  * backbone.routemanager.js may be freely distributed under the MIT license.
  */
 (function(window) {
-
 "use strict";
 
+// Normalize the `define` and `require` calls.
+var require = window.require || function() {};
+// Call the exports function or the crafted one with the Node.js `require`.
+var define = window.define || function(cb) { cb.call(this, require); };
+
+// Define the module contents.
+define(function(require) {
+
 // Localize global dependency references.
-var Backbone = window.Backbone;
-var _ = window._;
-var $ = window.$;
+var Backbone = require("backbone") || window.Backbone;
+var _ = require("underscore") || window._;
+
+// Save a reference to the original Backbone Router.
+var Router = Backbone.Router;
 
 var RouteManager = Backbone.Router.extend({
   // The constructor must be overridden, because this is where Backbone
@@ -19,7 +28,7 @@ var RouteManager = Backbone.Router.extend({
     // Options are passed in if using the constructor invocation syntax, this
     // ensures that if the definition syntax is used that options are pulled
     // from the instance.
-    options = options || this;
+    _.extend(this, options);// || this;
 
     // Useful for nested functions.
     var root = this;
@@ -28,12 +37,12 @@ var RouteManager = Backbone.Router.extend({
     // Use for attached routers.
     var routers = this.routers = {};
     // Router attached routes, normalized.
-    var normalizedRoutes = options.routes;
+    var normalizedRoutes = this.routes;
 
     // Iterate and augment the routes hash to accept Routers.
     _.each(normalizedRoutes, function(action, route) {
       var parent, router, SubRouter, originalRoute;
-      var prefix = options.prefix;
+      var prefix = root.prefix;
 
       // Prefix is optional, set to empty string if not passed.
       if (!prefix) {
@@ -62,7 +71,7 @@ var RouteManager = Backbone.Router.extend({
             var tempRoutes = {};
 
             // Make sure to prefix all routes.
-            _.each(this.routes, function(method, route) {
+            _.each(_.clone(this.routes), function(method, route) {
               delete this.routes[route];
 
               route = route ? prefix + "/" + route : prefix;
@@ -109,18 +118,16 @@ var RouteManager = Backbone.Router.extend({
       // the action and route are strings.
       } else if (_.isString(action) && _.isString(route)) {
         // Reset this here, since we don't want duplicate routes
-        prefix = options.prefix ? options.prefix : "";
+        prefix = root.prefix ? root.prefix : "";
 
         // Add the route callbacks to the instance, since they are
         // currently inside the options object.
-        root[action] = RouteManager.handleRoute.call(root, options[action],
+        root[action] = RouteManager.handleRoute.call(root, root[action],
           route);
 
         // Remove once the swap has occured.  Only do this if the options is
         // not the current context.
-        if (options !== root) {
-          delete options[action];
-        }
+        delete root[action];
         
         // Add route to collection of "normal" routes, ensure prefixing.
         if (route) {
@@ -137,7 +144,7 @@ var RouteManager = Backbone.Router.extend({
     this.routes = routes;
 
     // Fall back on Backbone.js to set up the manager routes.
-    return Backbone.Router.prototype.constructor.call(this);
+    return Router.prototype.constructor.call(this);
   },
 
   __manager__: { prefix: "" }
@@ -176,13 +183,10 @@ var RouteManager = Backbone.Router.extend({
       // Set the fragment, as detected by Backbone.
       fragment = Backbone.history.fragment;
 
-      // Params are a named object.
-      this.params = {};
-
-      // Map the arguments to the names inside the params object.
-      _.each(identifiers, function(arg, i) {
-        this.params[arg] = args[i];
-      }, this);
+      // Reduce the arguments to the names inside the params object.
+      this.params = _.reduce(idenitfiers, function(memo, arg, i) {
+        memo[arg] = args[i];
+      }, {});
 
       // Navigate the original route and then call the after callbacks.
       if (_.isFunction(original)) {
@@ -192,7 +196,9 @@ var RouteManager = Backbone.Router.extend({
   }
 });
 
-// Expose RouteManager onto Backbone.
-Backbone.RouteManager = RouteManager;
+// Assign `Backbone.Router` object and return for AMD loaders.
+return Backbone.Router = RouteManager;
 
-})(this);
+});
+
+})(typeof global === "object" ? global : this);
