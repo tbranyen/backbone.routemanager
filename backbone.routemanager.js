@@ -4,7 +4,7 @@
  */
 (function(window) {
 
-// 
+//
 // TODO
 // ===========================================
 //
@@ -90,7 +90,7 @@ var RouteManager = Backbone.Router.extend({
 
         // Initialize the Router inside the collection
         router = routers[route] = new SubRouter();
-        
+
         // Give the router state!
         route._state = {};
 
@@ -127,7 +127,7 @@ var RouteManager = Backbone.Router.extend({
         if (options !== root) {
           delete options[action];
         }
-        
+
         // Add route to collection of "normal" routes, ensure prefixing.
         if (route) {
           return routes[prefix + route] = action;
@@ -150,7 +150,7 @@ var RouteManager = Backbone.Router.extend({
 },
 {
   // This static method allows for global configuration of RouteManager.
-  configure: function(options) { 
+  configure: function(options) {
     var existing = Backbone.RouteManager.prototype.options;
 
     // Without this check the application would react strangely to a foreign
