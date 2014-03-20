@@ -5,13 +5,26 @@
   "main": "backbone.routemanager.js",
   "author": "Tim Branyen (@tbranyen)",
   "license": "MIT",
-
   "jam": {
-    "include": ["backbone.routemanager.js"],
-
+    "include": [
+      "backbone.routemanager.js"
+    ],
     "shim": {
       "exports": "Backbone.RouteManager",
-      "deps": ["backbone", "jquery", "lodash"]
+      "deps": [
+        "backbone",
+        "jquery",
+        "lodash"
+      ]
     }
+  },
+  "devDependencies": {
+    "grunt": "~0.4.2",
+    "grunt-contrib-jshint": "~0.9.2",
+    "grunt-contrib-qunit": "^0.4.0",
+    "grunt-contrib-uglify": "^0.4.0",
+    "grunt-contrib-watch": "^0.6.1",
+    "jshint-stylish": "^0.1.5",
+    "grunt-contrib-connect": "^0.7.1"
   }
 }
