@@ -91,9 +91,6 @@ var RouteManager = Backbone.Router.extend({
         // Initialize the Router inside the collection
         router = routers[route] = new SubRouter();
 
-        // Give the router state!
-        route._state = {};
-
         // Internal object cache for special RouteManager functionality.
         router.__manager__ = {
           // Used to avoid multiple lookups for router+prefix
